@@ -242,21 +242,51 @@ function renderClientCard(client) {
   card.appendChild(actions);
 
   if (client.estado === "bloqueado") {
-    const checklist = document.createElement("div");
-    checklist.className = "block-checklist";
-    checklist.innerHTML = `
-      <strong>Pendiente por hacer en Netflix</strong>
-      <ol>
-        <li>Entra a netflix.com/account con tu cuenta principal.</li>
-        <li>Ve a "Miembro extra" / "Gestionar acceso".</li>
-        <li>Selecciona a ${escapeHtml(client.nombre)} y elige "Eliminar" o "Pausar acceso".</li>
-      </ol>
-      Este sistema no puede hacerlo por ti: Netflix no ofrece esa función a apps externas.
-    `;
-    card.appendChild(checklist);
+    card.appendChild(renderBlockPanel(client));
   }
 
   return card;
+}
+
+function renderBlockPanel(client) {
+  const panel = document.createElement("div");
+  panel.className = "block-checklist";
+
+  const manualChecklist = `
+    <ol>
+      <li>Entra a netflix.com/account con tu cuenta principal.</li>
+      <li>Ve a "Miembro extra" / "Gestionar acceso".</li>
+      <li>Selecciona a ${escapeHtml(client.nombre)} y elige "Eliminar" o "Pausar acceso".</li>
+    </ol>
+  `;
+
+  if (client.netflixRemovalStatus === "in_progress") {
+    panel.innerHTML = `<strong>🤖 El bot está intentando retirarlo de Netflix ahora mismo…</strong>`;
+  } else if (client.netflixRemovalStatus === "done") {
+    panel.innerHTML = `<strong>✅ El bot ya lo retiró automáticamente de Netflix.</strong>`;
+  } else if (client.netflixRemovalStatus === "failed") {
+    panel.innerHTML = `
+      <strong>⚠️ El bot no pudo retirarlo automáticamente</strong>
+      <div>${escapeHtml(client.netflixRemovalMessage || "Error sin detalle.")}</div>
+      <strong>Hazlo manualmente mientras tanto:</strong>
+      ${manualChecklist}
+    `;
+    panel.appendChild(
+      actionButton("Reintentar automatización", "secondary", () => retryNetflixRemoval(client))
+    );
+  } else {
+    panel.innerHTML = `
+      <strong>Pendiente por hacer en Netflix</strong>
+      ${manualChecklist}
+      Este sistema no puede hacerlo por ti a menos que hayas configurado el bot automático (ver README).
+    `;
+  }
+
+  return panel;
+}
+
+async function retryNetflixRemoval(client) {
+  await fb.updateDoc(fb.doc(db, "clients", client.id), { netflixRemovalStatus: "pending" });
 }
 
 function actionButton(label, cls, onClick) {
@@ -318,6 +348,7 @@ function openModal(client) {
     document.getElementById("field-vencimiento").value = client.fechaVencimiento || todayISO();
     document.getElementById("field-ciclo").value = client.cicloDias ?? 30;
     document.getElementById("field-perfil").value = client.perfilPin || "";
+    document.getElementById("field-email-netflix").value = client.emailNetflix || "";
   } else {
     document.getElementById("field-vencimiento").value = todayISO();
     document.getElementById("field-ciclo").value = 30;
@@ -339,6 +370,7 @@ els.clientForm.addEventListener("submit", async (e) => {
     fechaVencimiento: document.getElementById("field-vencimiento").value,
     cicloDias: Number(document.getElementById("field-ciclo").value) || 30,
     perfilPin: document.getElementById("field-perfil").value.trim(),
+    emailNetflix: document.getElementById("field-email-netflix").value.trim(),
   };
   if (!data.nombre || !data.fechaVencimiento) return;
 

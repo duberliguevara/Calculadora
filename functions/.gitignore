@@ -1,0 +1,4 @@
+node_modules/
+netflix-session.local.json
+*.local.json
+.env

@@ -7,14 +7,22 @@ hay que bloquear cuando no pagan.
 ## Sobre el bloqueo
 
 Netflix **no ofrece una API pública** para que una app externa quite el
-acceso a un miembro extra específico. Esta app no puede (ni debe) automatizar
-eso iniciando sesión en tu Netflix por su cuenta: sería inseguro y se
-rompería con cualquier cambio en su sitio.
+acceso a un miembro extra específico. Por defecto, cuando marcas a un
+cliente como **Bloqueado**, la app te muestra un checklist con el paso
+manual que debes hacer en `netflix.com/account → Miembro extra`.
 
-Lo que sí hace: cuando marcas a un cliente como **Bloqueado**, la app te
-muestra un checklist con el paso manual real que debes hacer en
-`netflix.com/account → Miembro extra` para completarlo. El resto (seguimiento
-de pagos, vencimientos, recordatorios visuales) es 100% automático.
+Este repo también incluye, en `functions/`, un **bot opcional** que
+automatiza ese último paso iniciando sesión en tu Netflix real y haciendo el
+retiro por ti. Es opcional a propósito — actívalo solo si aceptas los
+riesgos que se explican en [`functions/README.md`](functions/README.md):
+puede violar los Términos de Uso de Netflix (arriesgando que te bloqueen o
+cierren la cuenta), requiere guardar el acceso a tu cuenta de Netflix en un
+servidor, y no fue probado contra el sitio real de Netflix (se escribió sin
+acceso a internet hacia netflix.com), así que es probable que necesites
+ajustarlo tú mismo la primera vez.
+
+El resto (seguimiento de pagos, vencimientos, recordatorios visuales) es
+100% automático con o sin el bot.
 
 ## Cómo funciona
 
@@ -70,3 +78,5 @@ Firebase Auth/Firestore.
 - `firestore.rules` — reglas de seguridad a publicar en Firebase Console.
 - `manifest.json` / `sw.js` — configuración PWA (instalable, funciona con
   caché de la app; los datos siempre requieren conexión).
+- `functions/` — bot opcional que automatiza el retiro en Netflix. Ver
+  [`functions/README.md`](functions/README.md) antes de activarlo.
