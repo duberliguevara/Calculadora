@@ -1,0 +1,17 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /clients/{clientId} {
+      allow read, update, delete: if request.auth != null
+        && request.auth.uid == resource.data.ownerId;
+      allow create: if request.auth != null
+        && request.auth.uid == request.resource.data.ownerId;
+    }
+
+    // La colección "system" (p. ej. system/netflixSession, la sesión que usa
+    // el bot de Cloud Functions) NO tiene ninguna regla que la permita.
+    // Firestore deniega por defecto todo lo que no coincide con una regla
+    // explícita, así que el navegador nunca puede leerla; solo el SDK de
+    // administrador que usan las Cloud Functions puede tocarla.
+  }
+}
