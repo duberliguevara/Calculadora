@@ -1,7 +1,10 @@
-const CACHE_NAME = 'pop-calculadora-v1';
+const CACHE_NAME = 'clientes-netflix-v1';
 const ASSETS = [
   './',
   'index.html',
+  'style.css',
+  'app.js',
+  'firebase-config.js',
   'manifest.json',
   'icons/icon-192.png',
   'icons/icon-512.png'
@@ -28,10 +31,19 @@ self.addEventListener('activate', function(event){
   self.clients.claim();
 });
 
+// Network-first for our own app shell files so fixes/updates aren't stuck
+// behind a stale cache; Firestore/Auth calls (cross-origin) pass through untouched.
 self.addEventListener('fetch', function(event){
+  var url = new URL(event.request.url);
+  if (url.origin !== self.location.origin) return;
+
   event.respondWith(
-    caches.match(event.request).then(function(cached){
-      return cached || fetch(event.request);
-    })
+    fetch(event.request)
+      .then(function(response){
+        var copy = response.clone();
+        caches.open(CACHE_NAME).then(function(cache){ cache.put(event.request, copy); });
+        return response;
+      })
+      .catch(function(){ return caches.match(event.request); })
   );
 });
