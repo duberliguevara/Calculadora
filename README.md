@@ -1,8 +1,13 @@
-# Gestor de Clientes Netflix
+# Gestor de Clientes Streaming
 
-App web (PWA) para administrar los clientes a los que les vendes acceso al
-"miembro extra" de tu cuenta de Netflix: quién pagó, cuándo vence, y cuáles
-hay que bloquear cuando no pagan.
+App web (PWA) para administrar los clientes a los que les vendes acceso a
+cuentas de streaming compartidas (Netflix, Disney+, HBO Max, etc., incluso
+combos de varias juntas): quién pagó, cuándo vence, y cuáles hay que
+bloquear cuando no pagan.
+
+También incluye, en `portal/`, una página aparte donde tus clientes se
+registran solos, pagan con Mercado Pago y ven su propio estado — ver
+[`portal/README.md`](portal/README.md).
 
 ## Sobre el bloqueo
 
@@ -78,5 +83,9 @@ Firebase Auth/Firestore.
 - `firestore.rules` — reglas de seguridad a publicar en Firebase Console.
 - `manifest.json` / `sw.js` — configuración PWA (instalable, funciona con
   caché de la app; los datos siempre requieren conexión).
-- `functions/` — bot opcional que automatiza el retiro en Netflix. Ver
-  [`functions/README.md`](functions/README.md) antes de activarlo.
+- `functions/` — Cloud Functions: el bot opcional que automatiza el retiro
+  en Netflix (ver [`functions/README.md`](functions/README.md) antes de
+  activarlo) y las funciones de pago que usa el portal de clientes.
+- `portal/` — página aparte para que los clientes se registren, paguen con
+  Mercado Pago y vean su propio estado. Ver
+  [`portal/README.md`](portal/README.md).

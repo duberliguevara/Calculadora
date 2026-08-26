@@ -7,6 +7,7 @@ const { SecretManagerServiceClient } = require("@google-cloud/secret-manager");
 const chromium = require("@sparticuz/chromium");
 const puppeteer = require("puppeteer-core");
 const { login, isLoggedIn, removeExtraMember } = require("./lib/netflixAutomation");
+const { registerPaymentFunctions } = require("./payments");
 
 admin.initializeApp();
 setGlobalOptions({ region: "us-central1" });
@@ -92,6 +93,14 @@ async function runRemoval(clientId, client) {
     await browser.close();
   }
 }
+
+const { createCheckoutPreference, mercadoPagoWebhook } = registerPaymentFunctions({
+  admin,
+  db,
+  readSecret,
+});
+exports.createCheckoutPreference = createCheckoutPreference;
+exports.mercadoPagoWebhook = mercadoPagoWebhook;
 
 exports.removeNetflixExtraMember = onDocumentUpdated(
   { document: "clients/{clientId}", memory: "1GiB", timeoutSeconds: 300 },
