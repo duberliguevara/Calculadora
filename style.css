@@ -450,6 +450,7 @@ button, input, select {
   background: var(--bg);
   color: var(--ink);
 }
+.individual-price-row input.platform-name-input { flex: 1; width: auto; font-weight: 700; }
 .individual-price-row .btn { padding: 8px 12px; font-size: 0.82rem; }
 .individual-price-row .save-status { font-size: 0.75rem; color: var(--ok-ink); min-width: 16px; }
 

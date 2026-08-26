@@ -2,7 +2,7 @@ import { firebaseConfig } from "./firebase-config.js";
 
 const FIREBASE_VERSION = "10.12.2";
 const isConfigured = firebaseConfig.apiKey && firebaseConfig.apiKey !== "TU_API_KEY";
-const INDIVIDUAL_PLATFORMS = ["Netflix", "Disney+", "HBO Max", "Prime Video", "Star+", "Otro"];
+const INDIVIDUAL_PLATFORMS = ["Netflix", "Disney+", "HBO Max", "Prime Video", "Star+", "Paramount+"];
 
 const els = {
   loginWrap: document.getElementById("login-wrap"),
@@ -367,63 +367,128 @@ function renderPlanList() {
   }
 }
 
+function renderIndividualPriceRow(platform, existing) {
+  const row = document.createElement("div");
+  row.className = "individual-price-row";
+
+  const name = document.createElement("span");
+  name.className = "platform-name";
+  name.textContent = platform;
+
+  const input = document.createElement("input");
+  input.type = "number";
+  input.min = "0";
+  input.step = "0.01";
+  input.placeholder = "Precio";
+  input.value = existing ? existing.precio : "";
+
+  const status = document.createElement("span");
+  status.className = "save-status";
+
+  const saveBtn = actionButton("Guardar", "secondary", async () => {
+    status.textContent = "";
+    const precio = Number(input.value);
+    if (!input.value || Number.isNaN(precio) || precio < 0) {
+      status.textContent = "?";
+      status.style.color = "var(--danger-ink)";
+      return;
+    }
+    try {
+      if (existing) {
+        await fb.updateDoc(fb.doc(db, "plans", existing.id), { precio });
+      } else {
+        await fb.addDoc(fb.collection(db, "plans"), {
+          nombre: platform,
+          servicios: [platform],
+          precio,
+        });
+      }
+      status.textContent = "✓";
+      status.style.color = "var(--ok-ink)";
+    } catch (err) {
+      status.textContent = "✗";
+      status.style.color = "var(--danger-ink)";
+      alert(`No se pudo guardar el precio de ${platform}: ${err.message}`);
+    }
+  });
+
+  row.appendChild(name);
+  row.appendChild(input);
+  row.appendChild(saveBtn);
+  row.appendChild(status);
+  return row;
+}
+
 function renderIndividualPrices() {
   els.individualPriceList.innerHTML = "";
+
   for (const platform of INDIVIDUAL_PLATFORMS) {
     const existing = plans.find(
       (p) => (p.servicios || []).length === 1 && p.servicios[0] === platform
     );
-
-    const row = document.createElement("div");
-    row.className = "individual-price-row";
-
-    const name = document.createElement("span");
-    name.className = "platform-name";
-    name.textContent = platform;
-
-    const input = document.createElement("input");
-    input.type = "number";
-    input.min = "0";
-    input.step = "0.01";
-    input.placeholder = "Precio";
-    input.value = existing ? existing.precio : "";
-
-    const status = document.createElement("span");
-    status.className = "save-status";
-
-    const saveBtn = actionButton("Guardar", "secondary", async () => {
-      status.textContent = "";
-      const precio = Number(input.value);
-      if (!input.value || Number.isNaN(precio) || precio < 0) {
-        status.textContent = "?";
-        status.style.color = "var(--danger-ink)";
-        return;
-      }
-      try {
-        if (existing) {
-          await fb.updateDoc(fb.doc(db, "plans", existing.id), { precio });
-        } else {
-          await fb.addDoc(fb.collection(db, "plans"), {
-            nombre: platform,
-            servicios: [platform],
-            precio,
-          });
-        }
-        status.textContent = "✓";
-        status.style.color = "var(--ok-ink)";
-      } catch (err) {
-        status.textContent = "✗";
-        status.style.color = "var(--danger-ink)";
-        alert(`No se pudo guardar el precio de ${platform}: ${err.message}`);
-      }
-    });
-
-    row.appendChild(name);
-    row.appendChild(input);
-    row.appendChild(saveBtn);
-    row.appendChild(status);
-    els.individualPriceList.appendChild(row);
+    els.individualPriceList.appendChild(renderIndividualPriceRow(platform, existing));
   }
+
+  const extras = plans.filter(
+    (p) => (p.servicios || []).length === 1 && !INDIVIDUAL_PLATFORMS.includes(p.servicios[0])
+  );
+  for (const plan of extras) {
+    els.individualPriceList.appendChild(renderIndividualPriceRow(plan.servicios[0], plan));
+  }
+
+  els.individualPriceList.appendChild(renderAddPlatformRow());
+}
+
+function renderAddPlatformRow() {
+  const row = document.createElement("div");
+  row.className = "individual-price-row";
+
+  const nameInput = document.createElement("input");
+  nameInput.type = "text";
+  nameInput.placeholder = "Nueva plataforma";
+  nameInput.className = "platform-name-input";
+
+  const priceInput = document.createElement("input");
+  priceInput.type = "number";
+  priceInput.min = "0";
+  priceInput.step = "0.01";
+  priceInput.placeholder = "Precio";
+
+  const status = document.createElement("span");
+  status.className = "save-status";
+
+  const addBtn = actionButton("Agregar", "secondary", async () => {
+    status.textContent = "";
+    const nombre = nameInput.value.trim();
+    const precio = Number(priceInput.value);
+    if (!nombre) {
+      status.textContent = "?";
+      status.style.color = "var(--danger-ink)";
+      return;
+    }
+    if (!priceInput.value || Number.isNaN(precio) || precio < 0) {
+      status.textContent = "?";
+      status.style.color = "var(--danger-ink)";
+      return;
+    }
+    try {
+      await fb.addDoc(fb.collection(db, "plans"), {
+        nombre,
+        servicios: [nombre],
+        precio,
+      });
+      nameInput.value = "";
+      priceInput.value = "";
+    } catch (err) {
+      alert(`No se pudo agregar "${nombre}": ${err.message}`);
+    }
+  });
+
+  row.appendChild(nameInput);
+  row.appendChild(priceInput);
+  row.appendChild(addBtn);
+  row.appendChild(status);
+  return row;
 }
 
 function getCheckedServices(container) {
