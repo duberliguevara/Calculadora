@@ -44,7 +44,8 @@ dependencies {
     implementation("androidx.activity:activity-ktx:1.9.1")
     implementation("androidx.lifecycle:lifecycle-service:2.8.4")
 
-    // Real H.264 encoding + RTMP publishing (camera -> hardware encoder -> RTMP push).
-    // Pinned below 2.7.x: those require compiling against API 37, which isn't available yet.
-    implementation("com.github.pedroSG94.RootEncoder:library:2.6.7")
+    // Real H.264 encoding + RTMP/SRT publishing (camera -> hardware encoder -> push).
+    // 2.7.5 is the latest that still compiles against API 36 (2.8.0+ needs API 37,
+    // which isn't available yet); it also carries several SRT interop fixes.
+    implementation("com.github.pedroSG94.RootEncoder:library:2.7.5")
 }
