@@ -15,6 +15,7 @@ const els = {
   statusPlan: document.getElementById("status-plan"),
   statusBadge: document.getElementById("status-badge"),
   statusVenc: document.getElementById("status-venc"),
+  accountError: document.getElementById("account-error"),
   accessGrid: document.getElementById("access-grid"),
   paywall: document.getElementById("paywall"),
   renewBtn: document.getElementById("renew-btn"),
@@ -131,19 +132,32 @@ async function handleAuthChange(user) {
   }
   els.loginCard.classList.add("hidden");
   els.accountCard.classList.remove("hidden");
+  els.accountError.textContent = "";
   els.userName.textContent = user.displayName || user.email;
   els.fieldNombre.value = user.displayName || "";
 
-  await loadPlans();
-  subscribeMyClient(user.uid);
+  try {
+    await loadPlans();
+    subscribeMyClient(user.uid);
+  } catch (err) {
+    console.error(err);
+    els.accountError.textContent = `No se pudo cargar tu cuenta: ${err.message}`;
+  }
 }
 
 function subscribeMyClient(uid) {
   const q = fb.query(fb.collection(db, "clients"), fb.where("customerUid", "==", uid), fb.limit(1));
-  fb.onSnapshot(q, (snap) => {
-    myClient = snap.empty ? null : { id: snap.docs[0].id, ...snap.docs[0].data() };
-    render();
-  });
+  fb.onSnapshot(
+    q,
+    (snap) => {
+      myClient = snap.empty ? null : { id: snap.docs[0].id, ...snap.docs[0].data() };
+      render();
+    },
+    (err) => {
+      console.error(err);
+      els.accountError.textContent = `No se pudo leer tu estado: ${err.message}`;
+    }
+  );
 }
 
 async function loadPlans() {
