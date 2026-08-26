@@ -54,40 +54,70 @@
   </header>
 
   <div class="container">
-    <div class="stats">
-      <div class="stat-card">
-        <div class="num" id="stat-total">0</div>
-        <div class="label">Clientes</div>
+    <div id="clients-view">
+      <div class="stats">
+        <div class="stat-card">
+          <div class="num" id="stat-total">0</div>
+          <div class="label">Clientes</div>
+        </div>
+        <div class="stat-card vencidos">
+          <div class="num" id="stat-vencidos">0</div>
+          <div class="label">Vencidos</div>
+        </div>
+        <div class="stat-card bloqueados">
+          <div class="num" id="stat-bloqueados">0</div>
+          <div class="label">Bloqueados</div>
+        </div>
+        <div class="stat-card ingresos">
+          <div class="num" id="stat-ingresos">$0</div>
+          <div class="label">Ingreso estimado</div>
+        </div>
       </div>
-      <div class="stat-card vencidos">
-        <div class="num" id="stat-vencidos">0</div>
-        <div class="label">Vencidos</div>
+
+      <div class="toolbar">
+        <input type="search" id="search" placeholder="Buscar por nombre...">
+        <select id="filter-estado">
+          <option value="todos">Todos los estados</option>
+          <option value="al_dia">Al día</option>
+          <option value="por_vencer">Por vencer</option>
+          <option value="vencido">Vencido</option>
+          <option value="bloqueado">Bloqueado</option>
+        </select>
+        <button id="new-client-btn" class="btn">+ Nuevo cliente</button>
       </div>
-      <div class="stat-card bloqueados">
-        <div class="num" id="stat-bloqueados">0</div>
-        <div class="label">Bloqueados</div>
-      </div>
-      <div class="stat-card ingresos">
-        <div class="num" id="stat-ingresos">$0</div>
-        <div class="label">Ingreso estimado</div>
+
+      <div id="client-list" class="client-list"></div>
+      <div id="empty-state" class="empty-state hidden">
+        Aún no tienes clientes registrados. Agrega el primero con "Nuevo cliente".
       </div>
     </div>
 
-    <div class="toolbar">
-      <input type="search" id="search" placeholder="Buscar por nombre...">
-      <select id="filter-estado">
-        <option value="todos">Todos los estados</option>
-        <option value="al_dia">Al día</option>
-        <option value="por_vencer">Por vencer</option>
-        <option value="vencido">Vencido</option>
-        <option value="bloqueado">Bloqueado</option>
-      </select>
-      <button id="new-client-btn" class="btn">+ Nuevo cliente</button>
-    </div>
-
-    <div id="client-list" class="client-list"></div>
-    <div id="empty-state" class="empty-state hidden">
-      Aún no tienes clientes registrados. Agrega el primero con "Nuevo cliente".
+    <div id="plans-view" class="hidden">
+      <div class="plan-list" id="plan-list"></div>
+      <form id="plan-form" class="plan-form-card">
+        <h2>Agregar plan</h2>
+        <div class="field">
+          <label for="plan-field-nombre">Nombre del plan</label>
+          <input id="plan-field-nombre" type="text" placeholder="Ej. Combo Cine" required>
+        </div>
+        <div class="field">
+          <label>Plataformas incluidas</label>
+          <div class="service-checks" id="plan-service-checks">
+            <label><input type="checkbox" value="Netflix"> Netflix</label>
+            <label><input type="checkbox" value="Disney+"> Disney+</label>
+            <label><input type="checkbox" value="HBO Max"> HBO Max</label>
+            <label><input type="checkbox" value="Prime Video"> Prime Video</label>
+            <label><input type="checkbox" value="Star+"> Star+</label>
+            <label><input type="checkbox" value="Otro"> Otro</label>
+          </div>
+        </div>
+        <div class="field">
+          <label for="plan-field-precio">Precio combinado</label>
+          <input id="plan-field-precio" type="number" min="0" step="0.01" required>
+        </div>
+        <div id="plan-error" class="error-text"></div>
+        <button type="submit" class="btn">Agregar plan</button>
+      </form>
     </div>
   </div>
 </div>
@@ -144,39 +174,6 @@
       <div class="modal-actions">
         <button type="button" id="cancel-modal-btn" class="btn secondary">Cancelar</button>
         <button type="submit" class="btn">Guardar</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<div id="plans-modal-backdrop" class="modal-backdrop hidden">
-  <div class="modal">
-    <h2>Planes y combos</h2>
-    <div class="plan-list" id="plan-list"></div>
-    <form id="plan-form">
-      <div class="field">
-        <label for="plan-field-nombre">Nombre del plan</label>
-        <input id="plan-field-nombre" type="text" placeholder="Ej. Combo Cine" required>
-      </div>
-      <div class="field">
-        <label>Plataformas incluidas</label>
-        <div class="service-checks" id="plan-service-checks">
-          <label><input type="checkbox" value="Netflix"> Netflix</label>
-          <label><input type="checkbox" value="Disney+"> Disney+</label>
-          <label><input type="checkbox" value="HBO Max"> HBO Max</label>
-          <label><input type="checkbox" value="Prime Video"> Prime Video</label>
-          <label><input type="checkbox" value="Star+"> Star+</label>
-          <label><input type="checkbox" value="Otro"> Otro</label>
-        </div>
-      </div>
-      <div class="field">
-        <label for="plan-field-precio">Precio combinado</label>
-        <input id="plan-field-precio" type="number" min="0" step="0.01" required>
-      </div>
-      <div id="plan-error" class="error-text"></div>
-      <div class="modal-actions">
-        <button type="button" id="close-plans-btn" class="btn secondary">Cerrar</button>
-        <button type="submit" class="btn">Agregar plan</button>
       </div>
     </form>
   </div>
