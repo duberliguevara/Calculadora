@@ -16,4 +16,5 @@
     <string name="notification_text">Transmitiendo la cámara a la PC</string>
     <string name="camera_permission_needed">Se necesita permiso de cámara para transmitir</string>
     <string name="missing_server_ip">Escribe la IP de la PC antes de iniciar</string>
+    <string name="pc_detected">PC detectada: %1$s</string>
 </resources>

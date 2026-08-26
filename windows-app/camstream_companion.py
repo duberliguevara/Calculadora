@@ -1,18 +1,21 @@
 """
 CamStream Companion - recibe el video H.264/RTMP que transmite el celular
 (app CamStream) y lo deja disponible para OBS Studio en una URL fija.
+También controla el celular a distancia (cámara/calidad/detener) para no
+tener que agarrarlo durante el stream.
 
 Qué hace:
   - Arranca un mini servidor de video local (MediaMTX) que solo actúa de
     relevo: el celular le empuja el video (RTMP publish) y OBS lo toma de
     ahí (RTMP play) — por eso la URL para OBS es siempre la misma:
     rtmp://127.0.0.1:1935/camstream
-  - Muestra la IP de esta PC, que hay que escribir una vez en la app del
-    celular (pantalla "IP de la PC") para conectar por WiFi.
+  - Se anuncia por broadcast UDP en la red para que la app del celular
+    detecte la IP de esta PC sola (no hay que escribirla).
   - Para USB: hace `adb reverse` para que el celular pueda llegar al
     servidor por el cable aunque no haya WiFi.
-  - Consulta el servidor cada 2s para mostrar si el celular ya está
-    conectado y transmitiendo.
+  - Detecta la IP del celular (via la propia MediaMTX, que sabe quién le
+    está publicando) y, una vez conectado, deja cambiar cámara/calidad o
+    detener la transmisión sin tocar el teléfono.
 """
 
 import json
@@ -29,6 +32,8 @@ from tkinter import messagebox, ttk
 
 RTMP_PORT = 1935
 API_PORT = 9997
+CONTROL_PORT = 8090
+PC_ANNOUNCE_PORT = 8091
 STREAM_PATH = "camstream"
 OBS_URL = f"rtmp://127.0.0.1:{RTMP_PORT}/{STREAM_PATH}"
 
@@ -101,26 +106,85 @@ class MediaServer:
                 self.process.kill()
 
 
+class PcAnnouncer:
+    """Broadcasts this PC's presence so the phone app fills in the IP by itself."""
+
+    def __init__(self):
+        self._stop = threading.Event()
+        self._thread: threading.Thread | None = None
+
+    def start(self):
+        self._thread = threading.Thread(target=self._run, daemon=True)
+        self._thread.start()
+
+    def stop(self):
+        self._stop.set()
+
+    def _run(self):
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        except OSError:
+            return
+        payload = json.dumps({"app": "camstream_pc"}).encode("utf-8")
+        while not self._stop.is_set():
+            try:
+                sock.sendto(payload, ("255.255.255.255", PC_ANNOUNCE_PORT))
+            except OSError:
+                pass
+            self._stop.wait(2.0)
+        sock.close()
+
+
+def api_get(path: str, port: int = API_PORT, timeout: float = 1.5):
+    req = urllib.request.Request(f"http://127.0.0.1:{port}{path}")
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+
 def phone_is_publishing() -> bool:
     try:
-        req = urllib.request.Request(f"http://127.0.0.1:{API_PORT}/v3/paths/get/{STREAM_PATH}")
-        with urllib.request.urlopen(req, timeout=1) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-            return bool(data.get("ready"))
+        return bool(api_get(f"/v3/paths/get/{STREAM_PATH}").get("ready"))
     except Exception:
         return False
+
+
+def get_phone_ip() -> str | None:
+    """MediaMTX already knows who is publishing to it — no need to ask the
+    user to type the phone's IP separately."""
+    try:
+        items = api_get("/v3/rtmpconns/list").get("items", [])
+        for item in items:
+            remote = item.get("remoteAddr", "")
+            if ":" in remote:
+                return remote.rsplit(":", 1)[0]
+    except Exception:
+        pass
+    return None
+
+
+def phone_control_get(phone_ip: str, path: str, timeout: float = 3.0):
+    req = urllib.request.Request(f"http://{phone_ip}:{CONTROL_PORT}{path}")
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return json.loads(resp.read().decode("utf-8"))
 
 
 class CompanionApp:
     def __init__(self, root: tk.Tk):
         self.root = root
         self.root.title("CamStream Companion")
-        self.root.geometry("520x480")
+        self.root.geometry("520x640")
         self.root.resizable(False, False)
 
         self.adb_path = find_adb()
         self.media_server = MediaServer()
+        self.pc_announcer = PcAnnouncer()
         self.local_ip = get_local_ip() or "(no detectada)"
+
+        self.phone_ip: str | None = None
+        self.cameras: list[dict] = []
+        self.qualities: list[dict] = []
+        self._updating_controls = False  # guard against re-sending our own dropdown refreshes
 
         pad = {"padx": 16, "pady": 8}
 
@@ -148,7 +212,7 @@ class CompanionApp:
 
         ttk.Label(
             wifi_frame,
-            text="En la app del celular, en 'IP de la PC' escribe:",
+            text="Esta PC se anuncia sola en la red — la app del celular\ndetecta la IP automáticamente. Si no, escribe esto ahí:",
         ).pack(anchor="w", padx=8, pady=(6, 2))
 
         ip_row = ttk.Frame(wifi_frame)
@@ -168,6 +232,33 @@ class CompanionApp:
             anchor="w", padx=8, pady=(0, 8)
         )
 
+        control_frame = ttk.LabelFrame(root, text="Control remoto (sin tocar el celular)")
+        control_frame.pack(fill="x", **pad)
+
+        self.control_status = ttk.Label(control_frame, text="Conecta el celular para habilitar el control")
+        self.control_status.pack(anchor="w", padx=8, pady=(6, 6))
+
+        cam_row = ttk.Frame(control_frame)
+        cam_row.pack(fill="x", padx=8, pady=4)
+        ttk.Label(cam_row, text="Cámara:", width=10).pack(side="left")
+        self.camera_var = tk.StringVar()
+        self.camera_combo = ttk.Combobox(cam_row, textvariable=self.camera_var, state="disabled")
+        self.camera_combo.pack(side="left", fill="x", expand=True)
+        self.camera_combo.bind("<<ComboboxSelected>>", self._on_camera_selected)
+
+        quality_row = ttk.Frame(control_frame)
+        quality_row.pack(fill="x", padx=8, pady=4)
+        ttk.Label(quality_row, text="Calidad:", width=10).pack(side="left")
+        self.quality_var = tk.StringVar()
+        self.quality_combo = ttk.Combobox(quality_row, textvariable=self.quality_var, state="disabled")
+        self.quality_combo.pack(side="left", fill="x", expand=True)
+        self.quality_combo.bind("<<ComboboxSelected>>", self._on_quality_selected)
+
+        self.stop_button = ttk.Button(
+            control_frame, text="Detener transmisión", command=self.remote_stop, state="disabled"
+        )
+        self.stop_button.pack(anchor="w", padx=8, pady=(4, 8))
+
         result_frame = ttk.LabelFrame(root, text="URL para OBS (Fuente de Media)")
         result_frame.pack(fill="x", **pad)
 
@@ -183,6 +274,7 @@ class CompanionApp:
 
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
         self._start_server()
+        self.pc_announcer.start()
         self._poll_status()
 
     # --- server lifecycle ---
@@ -199,9 +291,94 @@ class CompanionApp:
             self.server_status.config(text="❌ El servidor de video se detuvo")
         elif phone_is_publishing():
             self.conn_status.config(text="🟢 Celular conectado y transmitiendo")
+            threading.Thread(target=self._refresh_remote_control, daemon=True).start()
         else:
             self.conn_status.config(text="⚪ Esperando que el celular se conecte…")
+            self.phone_ip = None
+            self._set_controls_enabled(False)
         self.root.after(2000, self._poll_status)
+
+    # --- remote control ---
+
+    def _refresh_remote_control(self):
+        phone_ip = get_phone_ip()
+        if not phone_ip:
+            return
+        try:
+            status = phone_control_get(phone_ip, "/status")
+        except Exception:
+            self.root.after(0, lambda: self._set_controls_enabled(False))
+            return
+        self.phone_ip = phone_ip
+        self.root.after(0, lambda: self._apply_status(status))
+
+    def _apply_status(self, status: dict):
+        self.cameras = status.get("cameras", [])
+        self.qualities = status.get("qualities", [])
+        self._set_controls_enabled(True)
+        self.control_status.config(text=f"🟢 Controlando celular en {self.phone_ip}")
+
+        self._updating_controls = True
+        try:
+            camera_labels = [c["label"] for c in self.cameras]
+            self.camera_combo["values"] = camera_labels
+            current_camera = status.get("cameraId")
+            match = next((c["label"] for c in self.cameras if c["id"] == current_camera), None)
+            if match and self.camera_var.get() != match:
+                self.camera_var.set(match)
+
+            quality_labels = [q["label"] for q in self.qualities]
+            self.quality_combo["values"] = quality_labels
+            current_quality = status.get("qualityKey")
+            match_q = next((q["label"] for q in self.qualities if q["key"] == current_quality), None)
+            if match_q and self.quality_var.get() != match_q:
+                self.quality_var.set(match_q)
+        finally:
+            self._updating_controls = False
+
+    def _set_controls_enabled(self, enabled: bool):
+        state = "readonly" if enabled else "disabled"
+        self.camera_combo.config(state=state)
+        self.quality_combo.config(state=state)
+        self.stop_button.config(state="normal" if enabled else "disabled")
+        if not enabled:
+            self.control_status.config(text="Conecta el celular para habilitar el control")
+
+    def _on_camera_selected(self, _event=None):
+        if self._updating_controls or not self.phone_ip:
+            return
+        label = self.camera_var.get()
+        camera = next((c for c in self.cameras if c["label"] == label), None)
+        if not camera:
+            return
+        phone_ip = self.phone_ip
+        threading.Thread(
+            target=lambda: self._safe_control_call(phone_ip, f"/camera?id={camera['id']}"), daemon=True
+        ).start()
+
+    def _on_quality_selected(self, _event=None):
+        if self._updating_controls or not self.phone_ip:
+            return
+        label = self.quality_var.get()
+        quality = next((q for q in self.qualities if q["label"] == label), None)
+        if not quality:
+            return
+        phone_ip = self.phone_ip
+        threading.Thread(
+            target=lambda: self._safe_control_call(phone_ip, f"/quality?key={quality['key']}"), daemon=True
+        ).start()
+
+    def remote_stop(self):
+        if not self.phone_ip:
+            return
+        phone_ip = self.phone_ip
+        threading.Thread(target=lambda: self._safe_control_call(phone_ip, "/stop"), daemon=True).start()
+
+    def _safe_control_call(self, phone_ip: str, path: str):
+        try:
+            phone_control_get(phone_ip, path)
+        except Exception:
+            pass  # next status poll will reflect whatever actually happened
 
     # --- USB ---
 
@@ -228,8 +405,14 @@ class CompanionApp:
             return
 
         try:
+            # reverse: lets the phone's RTMP push (phone -> 127.0.0.1:1935) reach our server.
             subprocess.run(
                 [self.adb_path, "reverse", f"tcp:{RTMP_PORT}", f"tcp:{RTMP_PORT}"],
+                check=True, capture_output=True, text=True, timeout=10,
+            )
+            # forward: the opposite direction, lets us (PC) reach the phone's control server.
+            subprocess.run(
+                [self.adb_path, "forward", f"tcp:{CONTROL_PORT}", f"tcp:{CONTROL_PORT}"],
                 check=True, capture_output=True, text=True, timeout=10,
             )
         except subprocess.CalledProcessError as exc:
@@ -250,6 +433,7 @@ class CompanionApp:
         messagebox.showinfo("Copiado", "URL copiada al portapapeles.")
 
     def _on_close(self):
+        self.pc_announcer.stop()
         self.media_server.stop()
         self.root.destroy()
 

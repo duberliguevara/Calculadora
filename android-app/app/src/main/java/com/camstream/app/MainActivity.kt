@@ -27,6 +27,7 @@ class MainActivity : AppCompatActivity(), StreamStatus.Listener {
     private var selectedCameraId: String? = null
     private var selectedQuality: QualityPreset = QualityPreset.DEFAULT
     private var currentState: StreamStatus.State = StreamStatus.State.IDLE
+    private val pcDiscovery = PcDiscoveryListener { ip -> onPcDiscovered(ip) }
 
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -55,11 +56,23 @@ class MainActivity : AppCompatActivity(), StreamStatus.Listener {
     override fun onStart() {
         super.onStart()
         StreamStatus.listener = this
+        pcDiscovery.start()
     }
 
     override fun onStop() {
         super.onStop()
         StreamStatus.listener = null
+        pcDiscovery.stop()
+    }
+
+    private fun onPcDiscovered(ip: String) {
+        runOnUiThread {
+            val current = binding.serverIpInput.text?.toString()?.trim().orEmpty()
+            if (current.isEmpty()) {
+                binding.serverIpInput.setText(ip)
+                Toast.makeText(this, getString(R.string.pc_detected, ip), Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     private fun setupCameraDropdown() {
@@ -157,7 +170,7 @@ class MainActivity : AppCompatActivity(), StreamStatus.Listener {
     private fun isActiveState(state: StreamStatus.State) = state == StreamStatus.State.STARTING ||
         state == StreamStatus.State.CONNECTING || state == StreamStatus.State.STREAMING
 
-    override fun onStatusChanged(state: StreamStatus.State, message: String?) {
+    override fun onStatusChanged(state: StreamStatus.State, message: String?, cameraId: String?, qualityKey: String?) {
         runOnUiThread {
             currentState = state
             binding.toggleButton.text = getString(
@@ -172,6 +185,20 @@ class MainActivity : AppCompatActivity(), StreamStatus.Listener {
             }
             binding.statusText.text = text
             binding.statusText.setTextColor(color)
+
+            // Reflect changes the PC companion made remotely, so the dropdowns never go stale.
+            cameraId?.let { id ->
+                if (id != selectedCameraId) {
+                    selectedCameraId = id
+                    cameraOptions.firstOrNull { it.id == id }?.let { binding.cameraDropdown.setText(it.label, false) }
+                }
+            }
+            qualityKey?.let { key ->
+                if (key != selectedQuality.key) {
+                    selectedQuality = QualityPreset.fromKey(key)
+                    binding.qualityDropdown.setText(selectedQuality.label, false)
+                }
+            }
         }
     }
 }
