@@ -13,8 +13,27 @@
 <div class="wrap">
   <div class="card" id="login-card">
     <h1>Mi cuenta de Streaming</h1>
-    <p class="sub">Inicia sesión con tu cuenta de Google para ver tu estado o suscribirte.</p>
+    <p class="sub">Inicia sesión para ver tu estado o suscribirte.</p>
     <button id="google-btn" class="btn full">Continuar con Google</button>
+
+    <div class="divider"><span>o con tu correo</span></div>
+
+    <form id="email-auth-form">
+      <div class="field">
+        <label for="auth-email">Correo</label>
+        <input id="auth-email" type="email" required autocomplete="username">
+      </div>
+      <div class="field">
+        <label for="auth-password">Contraseña</label>
+        <input id="auth-password" type="password" required autocomplete="current-password" minlength="6">
+      </div>
+      <div class="auth-buttons">
+        <button type="submit" id="email-login-btn" class="btn secondary">Iniciar sesión</button>
+        <button type="button" id="email-signup-btn" class="btn">Crear cuenta</button>
+      </div>
+      <button type="button" id="forgot-password-btn" class="link-btn">¿Olvidaste tu contraseña?</button>
+    </form>
+
     <div id="login-error" class="error-text"></div>
     <div id="setup-warning" class="setup-warning hidden"></div>
   </div>
