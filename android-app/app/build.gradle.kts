@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace = "com.camstream.app"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.camstream.app"
@@ -44,8 +44,7 @@ dependencies {
     implementation("androidx.activity:activity-ktx:1.9.1")
     implementation("androidx.lifecycle:lifecycle-service:2.8.4")
 
-    val cameraxVersion = "1.3.4"
-    implementation("androidx.camera:camera-core:$cameraxVersion")
-    implementation("androidx.camera:camera-camera2:$cameraxVersion")
-    implementation("androidx.camera:camera-lifecycle:$cameraxVersion")
+    // Real H.264 encoding + RTMP publishing (camera -> hardware encoder -> RTMP push).
+    // Pinned below 2.7.x: those require compiling against API 37, which isn't available yet.
+    implementation("com.github.pedroSG94.RootEncoder:library:2.6.7")
 }

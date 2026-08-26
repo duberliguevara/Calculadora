@@ -1,2 +1,4 @@
 __pycache__/
 *.pyc
+windows-app/mediamtx/auto.crt
+windows-app/mediamtx/auto.key
