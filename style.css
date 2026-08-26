@@ -403,7 +403,17 @@ button, input, select {
 }
 .modal-actions .btn { flex: 1; }
 
-.plans-section { margin-bottom: 28px; }
+#plans-view {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 28px;
+  align-items: start;
+}
+@media (min-width: 760px) {
+  #plans-view { grid-template-columns: 1fr 1fr; }
+}
+
+.plans-section { margin-bottom: 0; }
 .plans-section h2 { margin: 0 0 4px; font-size: 1.05rem; }
 .plans-section .muted { color: var(--muted); font-size: 0.85rem; margin: 0 0 14px; }
 
