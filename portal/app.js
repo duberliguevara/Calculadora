@@ -56,7 +56,7 @@ const PLATFORM_LINKS = {
   "HBO Max": { url: "https://www.max.com", color: "#6c2fbf" },
   "Prime Video": { url: "https://www.primevideo.com", color: "#00a8e1" },
   "Star+": { url: "https://www.starplus.com", color: "#0a0e17" },
-  "Otro": { url: "#", color: "#6b7280" },
+  "Paramount+": { url: "https://www.paramountplus.com", color: "#0064ff" },
 };
 
 async function init() {
@@ -288,7 +288,10 @@ function render() {
 function renderAccessGrid(servicios) {
   els.accessGrid.innerHTML = "";
   for (const servicio of servicios) {
-    const link = PLATFORM_LINKS[servicio] || { url: "#", color: "#6b7280" };
+    const link = PLATFORM_LINKS[servicio] || {
+      url: `https://www.google.com/search?q=${encodeURIComponent(servicio)}`,
+      color: "#6b7280",
+    };
     const card = document.createElement("a");
     card.className = "platform-card";
     card.href = link.url;
