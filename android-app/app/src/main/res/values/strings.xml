@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">CamStream</string>
+    <string name="start_streaming">Iniciar transmisión</string>
+    <string name="stop_streaming">Detener transmisión</string>
+    <string name="status_idle">Detenido</string>
+    <string name="status_streaming">Transmitiendo</string>
+    <string name="notification_channel_name">Transmisión de cámara</string>
+    <string name="notification_title">CamStream activo</string>
+    <string name="notification_text">Transmitiendo la cámara por la red local</string>
+    <string name="camera_permission_needed">Se necesita permiso de cámara para transmitir</string>
+</resources>
