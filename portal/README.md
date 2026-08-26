@@ -24,6 +24,16 @@ prueba completa antes de anunciarlo a tus clientes.
    del cliente en Firestore — el mismo que ves en tu app de administración.
 4. El cliente puede volver a `portal/` en cualquier momento para ver su
    estado (al día / por vencer / vencido) y renovar antes de que se venza.
+5. Mientras está al día, el portal también funciona como **launcher**:
+   muestra una tarjeta grande por cada plataforma de su plan (Netflix,
+   Disney+, etc.) que lo lleva a la página oficial de esa plataforma para
+   iniciar sesión con las credenciales que le diste. Pensado para abrirse
+   desde el navegador de un smart TV, no solo desde el celular. Esta app
+   nunca aloja ni retransmite contenido de video — solo organiza el acceso.
+   En cuanto el cliente vence o lo bloqueas, esas tarjetas desaparecen y en
+   su lugar ve un aviso para renovar: es un bloqueo instantáneo que no
+   depende de tocar la cuenta real de Netflix (para eso sigue existiendo el
+   bot aparte, que si quieres también retira a la persona de la cuenta).
 
 **Importante**: esto activa el pago de **un ciclo a la vez** (30 días por
 defecto). No cobra automáticamente el siguiente mes solo — el cliente tiene
