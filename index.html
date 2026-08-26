@@ -93,31 +93,41 @@
     </div>
 
     <div id="plans-view" class="hidden">
-      <div class="plan-list" id="plan-list"></div>
-      <form id="plan-form" class="plan-form-card">
-        <h2>Agregar plan</h2>
-        <div class="field">
-          <label for="plan-field-nombre">Nombre del plan</label>
-          <input id="plan-field-nombre" type="text" placeholder="Ej. Combo Cine" required>
-        </div>
-        <div class="field">
-          <label>Plataformas incluidas</label>
-          <div class="service-checks" id="plan-service-checks">
-            <label><input type="checkbox" value="Netflix"> Netflix</label>
-            <label><input type="checkbox" value="Disney+"> Disney+</label>
-            <label><input type="checkbox" value="HBO Max"> HBO Max</label>
-            <label><input type="checkbox" value="Prime Video"> Prime Video</label>
-            <label><input type="checkbox" value="Star+"> Star+</label>
-            <label><input type="checkbox" value="Otro"> Otro</label>
+      <section class="plans-section">
+        <h2>Precios individuales</h2>
+        <p class="muted">El precio de cada plataforma por separado.</p>
+        <div id="individual-price-list" class="individual-price-list"></div>
+      </section>
+
+      <section class="plans-section">
+        <h2>Combos</h2>
+        <p class="muted">Paquetes con varias plataformas juntas y un precio conjunto.</p>
+        <div class="plan-list" id="plan-list"></div>
+        <form id="plan-form" class="plan-form-card">
+          <h3>Agregar combo</h3>
+          <div class="field">
+            <label for="plan-field-nombre">Nombre del combo</label>
+            <input id="plan-field-nombre" type="text" placeholder="Ej. Combo Cine" required>
           </div>
-        </div>
-        <div class="field">
-          <label for="plan-field-precio">Precio combinado</label>
-          <input id="plan-field-precio" type="number" min="0" step="0.01" required>
-        </div>
-        <div id="plan-error" class="error-text"></div>
-        <button type="submit" class="btn">Agregar plan</button>
-      </form>
+          <div class="field">
+            <label>Plataformas incluidas</label>
+            <div class="service-checks" id="plan-service-checks">
+              <label><input type="checkbox" value="Netflix"> Netflix</label>
+              <label><input type="checkbox" value="Disney+"> Disney+</label>
+              <label><input type="checkbox" value="HBO Max"> HBO Max</label>
+              <label><input type="checkbox" value="Prime Video"> Prime Video</label>
+              <label><input type="checkbox" value="Star+"> Star+</label>
+              <label><input type="checkbox" value="Otro"> Otro</label>
+            </div>
+          </div>
+          <div class="field">
+            <label for="plan-field-precio">Precio combinado</label>
+            <input id="plan-field-precio" type="number" min="0" step="0.01" required>
+          </div>
+          <div id="plan-error" class="error-text"></div>
+          <button type="submit" class="btn">Agregar combo</button>
+        </form>
+      </section>
     </div>
   </div>
 </div>

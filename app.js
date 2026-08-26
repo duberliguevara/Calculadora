@@ -2,6 +2,7 @@ import { firebaseConfig } from "./firebase-config.js";
 
 const FIREBASE_VERSION = "10.12.2";
 const isConfigured = firebaseConfig.apiKey && firebaseConfig.apiKey !== "TU_API_KEY";
+const INDIVIDUAL_PLATFORMS = ["Netflix", "Disney+", "HBO Max", "Prime Video", "Star+", "Otro"];
 
 const els = {
   loginWrap: document.getElementById("login-wrap"),
@@ -31,6 +32,7 @@ const els = {
   clientsView: document.getElementById("clients-view"),
   plansView: document.getElementById("plans-view"),
   planList: document.getElementById("plan-list"),
+  individualPriceList: document.getElementById("individual-price-list"),
   planForm: document.getElementById("plan-form"),
   planServiceChecks: document.getElementById("plan-service-checks"),
   planError: document.getElementById("plan-error"),
@@ -144,6 +146,7 @@ function subscribePlans() {
     plans = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
     renderPlanOptions();
     renderPlanList();
+    renderIndividualPrices();
   });
 }
 
@@ -341,12 +344,13 @@ function renderPlanOptions() {
 }
 
 function renderPlanList() {
+  const combos = plans.filter((p) => (p.servicios || []).length > 1);
   els.planList.innerHTML = "";
-  if (!plans.length) {
-    els.planList.innerHTML = `<div class="empty-state">Aún no tienes planes/combos creados.</div>`;
+  if (!combos.length) {
+    els.planList.innerHTML = `<div class="empty-state">Aún no tienes combos creados.</div>`;
     return;
   }
-  for (const plan of plans) {
+  for (const plan of combos) {
     const card = document.createElement("div");
     card.className = "plan-card";
     card.innerHTML = `
@@ -360,6 +364,65 @@ function renderPlanList() {
       actionButton("Eliminar", "danger", () => deletePlan(plan))
     );
     els.planList.appendChild(card);
+  }
+}
+
+function renderIndividualPrices() {
+  els.individualPriceList.innerHTML = "";
+  for (const platform of INDIVIDUAL_PLATFORMS) {
+    const existing = plans.find(
+      (p) => (p.servicios || []).length === 1 && p.servicios[0] === platform
+    );
+
+    const row = document.createElement("div");
+    row.className = "individual-price-row";
+
+    const name = document.createElement("span");
+    name.className = "platform-name";
+    name.textContent = platform;
+
+    const input = document.createElement("input");
+    input.type = "number";
+    input.min = "0";
+    input.step = "0.01";
+    input.placeholder = "Precio";
+    input.value = existing ? existing.precio : "";
+
+    const status = document.createElement("span");
+    status.className = "save-status";
+
+    const saveBtn = actionButton("Guardar", "secondary", async () => {
+      status.textContent = "";
+      const precio = Number(input.value);
+      if (!input.value || Number.isNaN(precio) || precio < 0) {
+        status.textContent = "?";
+        status.style.color = "var(--danger-ink)";
+        return;
+      }
+      try {
+        if (existing) {
+          await fb.updateDoc(fb.doc(db, "plans", existing.id), { precio });
+        } else {
+          await fb.addDoc(fb.collection(db, "plans"), {
+            nombre: platform,
+            servicios: [platform],
+            precio,
+          });
+        }
+        status.textContent = "✓";
+        status.style.color = "var(--ok-ink)";
+      } catch (err) {
+        status.textContent = "✗";
+        status.style.color = "var(--danger-ink)";
+        alert(`No se pudo guardar el precio de ${platform}: ${err.message}`);
+      }
+    });
+
+    row.appendChild(name);
+    row.appendChild(input);
+    row.appendChild(saveBtn);
+    row.appendChild(status);
+    els.individualPriceList.appendChild(row);
   }
 }
 
