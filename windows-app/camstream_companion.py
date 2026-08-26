@@ -133,9 +133,9 @@ class CompanionApp:
             text="Abre la app CamStream en el celular y presiona 'Iniciar\ntransmisión' — debería aparecer aquí en unos segundos:",
         ).pack(anchor="w", padx=8, pady=(4, 0))
 
-        self.device_listbox = tk.Listbox(wifi_frame, height=4)
+        self.device_listbox = tk.Listbox(wifi_frame, height=4, exportselection=False)
         self.device_listbox.pack(fill="x", padx=8, pady=4)
-        self.device_listbox.bind("<Double-Button-1>", lambda _e: self.use_selected_device())
+        self.device_listbox.bind("<<ListboxSelect>>", self._on_listbox_select)
 
         ttk.Button(wifi_frame, text="Usar seleccionado", command=self.use_selected_device).pack(
             anchor="w", padx=8, pady=(0, 4)
@@ -177,6 +177,14 @@ class CompanionApp:
     # --- WiFi auto-discovery ---
 
     def _refresh_device_list(self):
+        # Remember the selected IP (not just its index) so we can restore the
+        # highlight after rebuilding — otherwise every refresh silently drops
+        # the user's selection.
+        selected_ip = None
+        current = self.device_listbox.curselection()
+        if current and current[0] < len(self._list_index_to_ip):
+            selected_ip = self._list_index_to_ip[current[0]]
+
         devices = self.discovery.snapshot()
         self.device_listbox.delete(0, tk.END)
         self._list_index_to_ip = []
@@ -187,7 +195,17 @@ class CompanionApp:
             self._list_index_to_ip.append(ip)
         if not devices:
             self.device_listbox.insert(tk.END, "(ninguno por ahora — esperando transmisión...)")
+
+        if selected_ip in self._list_index_to_ip:
+            self.device_listbox.selection_set(self._list_index_to_ip.index(selected_ip))
+
         self.root.after(1000, self._refresh_device_list)
+
+    def _on_listbox_select(self, _event=None):
+        # Fires on every click/selection change; stay silent if there's
+        # nothing selected instead of popping up a warning during a refresh.
+        if self.device_listbox.curselection():
+            self.use_selected_device()
 
     def use_selected_device(self):
         selection = self.device_listbox.curselection()
