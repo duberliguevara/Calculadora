@@ -24,7 +24,6 @@ const els = {
   accountError: document.getElementById("account-error"),
   credentialsBox: document.getElementById("credentials-box"),
   credentialsValue: document.getElementById("credentials-value"),
-  credentialsToggle: document.getElementById("credentials-toggle"),
   credentialsCopy: document.getElementById("credentials-copy"),
   credentialsCopied: document.getElementById("credentials-copied"),
   accessGrid: document.getElementById("access-grid"),
@@ -313,18 +312,8 @@ function maskCredentials(text) {
 
 function resetCredentialsDisplay() {
   els.credentialsValue.textContent = maskCredentials(myClient.credenciales);
-  els.credentialsValue.dataset.hidden = "true";
-  els.credentialsToggle.textContent = "Mostrar";
   els.credentialsCopied.textContent = "";
 }
-
-els.credentialsToggle.addEventListener("click", () => {
-  if (!myClient || !myClient.credenciales) return;
-  const hidden = els.credentialsValue.dataset.hidden !== "false";
-  els.credentialsValue.textContent = hidden ? myClient.credenciales : maskCredentials(myClient.credenciales);
-  els.credentialsValue.dataset.hidden = hidden ? "false" : "true";
-  els.credentialsToggle.textContent = hidden ? "Ocultar" : "Mostrar";
-});
 
 els.credentialsCopy.addEventListener("click", async () => {
   if (!myClient || !myClient.credenciales) return;
