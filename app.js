@@ -32,6 +32,7 @@ const els = {
   planForm: document.getElementById("plan-form"),
   planServiceChecks: document.getElementById("plan-service-checks"),
   closePlansBtn: document.getElementById("close-plans-btn"),
+  planError: document.getElementById("plan-error"),
 };
 
 let auth, db;
@@ -384,17 +385,33 @@ els.plansModalBackdrop.addEventListener("click", (e) => {
 
 els.planForm.addEventListener("submit", async (e) => {
   e.preventDefault();
+  els.planError.textContent = "";
   const nombre = document.getElementById("plan-field-nombre").value.trim();
   const precio = Number(document.getElementById("plan-field-precio").value) || 0;
   const servicios = getCheckedServices(els.planServiceChecks);
-  if (!nombre || !servicios.length) return;
-  await fb.addDoc(fb.collection(db, "plans"), { nombre, precio, servicios });
-  els.planForm.reset();
+  if (!nombre) {
+    els.planError.textContent = "Ponle un nombre al plan.";
+    return;
+  }
+  if (!servicios.length) {
+    els.planError.textContent = "Marca al menos una plataforma.";
+    return;
+  }
+  try {
+    await fb.addDoc(fb.collection(db, "plans"), { nombre, precio, servicios });
+    els.planForm.reset();
+  } catch (err) {
+    els.planError.textContent = `No se pudo guardar el plan: ${err.message}`;
+  }
 });
 
 async function deletePlan(plan) {
   if (!confirm(`¿Eliminar el plan "${plan.nombre}"? Los clientes que ya lo tienen asignado no se modifican.`)) return;
-  await fb.deleteDoc(fb.doc(db, "plans", plan.id));
+  try {
+    await fb.deleteDoc(fb.doc(db, "plans", plan.id));
+  } catch (err) {
+    alert(`No se pudo eliminar el plan: ${err.message}`);
+  }
 }
 
 els.fieldPlan.addEventListener("change", () => {

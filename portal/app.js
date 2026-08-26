@@ -14,8 +14,9 @@ const els = {
   statusBlock: document.getElementById("status-block"),
   statusPlan: document.getElementById("status-plan"),
   statusBadge: document.getElementById("status-badge"),
-  statusServices: document.getElementById("status-services"),
   statusVenc: document.getElementById("status-venc"),
+  accessGrid: document.getElementById("access-grid"),
+  paywall: document.getElementById("paywall"),
   renewBtn: document.getElementById("renew-btn"),
   signupForm: document.getElementById("signup-form"),
   fieldNombre: document.getElementById("field-nombre"),
@@ -34,6 +35,18 @@ let myClient = null;
 let plans = [];
 
 const STATUS_LABEL = { al_dia: "Al día", por_vencer: "Por vencer", vencido: "Vencido", bloqueado: "Bloqueado" };
+
+// A dónde manda cada tarjeta de plataforma. Enlaza a la página/app oficial
+// de cada servicio (ahí el cliente inicia sesión con las credenciales que
+// le diste) — esta app nunca aloja ni retransmite contenido de video.
+const PLATFORM_LINKS = {
+  "Netflix": { url: "https://www.netflix.com", color: "#e50914" },
+  "Disney+": { url: "https://www.disneyplus.com", color: "#113ccf" },
+  "HBO Max": { url: "https://www.max.com", color: "#6c2fbf" },
+  "Prime Video": { url: "https://www.primevideo.com", color: "#00a8e1" },
+  "Star+": { url: "https://www.starplus.com", color: "#0a0e17" },
+  "Otro": { url: "#", color: "#6b7280" },
+};
 
 async function init() {
   showReturnBanner();
@@ -172,17 +185,37 @@ function render() {
     els.statusBlock.classList.remove("hidden");
     els.signupForm.classList.add("hidden");
     const estado = computeStatus(myClient);
+    const tieneAcceso = estado === "al_dia" || estado === "por_vencer";
+
     els.statusPlan.textContent = myClient.planNombre || "Tu plan";
     els.statusBadge.textContent = STATUS_LABEL[estado];
     els.statusBadge.className = `badge ${estado}`;
-    els.statusServices.innerHTML = (myClient.servicios || [])
-      .map((s) => `<span class="service-tag">${escapeHtml(s)}</span>`)
-      .join("");
     els.statusVenc.textContent = `Próximo vencimiento: ${myClient.fechaVencimiento} · ${formatMoney(myClient.monto)}`;
+
+    els.accessGrid.classList.toggle("hidden", !tieneAcceso);
+    els.paywall.classList.toggle("hidden", tieneAcceso);
+    if (tieneAcceso) renderAccessGrid(myClient.servicios || []);
+
+    els.renewBtn.classList.toggle("hidden", estado === "al_dia");
     els.renewBtn.onclick = () => startCheckout(myClient.planId, myClient.nombre, myClient.contacto);
   } else {
     els.statusBlock.classList.add("hidden");
     els.signupForm.classList.remove("hidden");
+  }
+}
+
+function renderAccessGrid(servicios) {
+  els.accessGrid.innerHTML = "";
+  for (const servicio of servicios) {
+    const link = PLATFORM_LINKS[servicio] || { url: "#", color: "#6b7280" };
+    const card = document.createElement("a");
+    card.className = "platform-card";
+    card.href = link.url;
+    card.target = "_blank";
+    card.rel = "noopener";
+    card.style.setProperty("--platform-color", link.color);
+    card.innerHTML = `<span class="platform-name">${escapeHtml(servicio)}</span><span class="platform-go">Entrar ›</span>`;
+    els.accessGrid.appendChild(card);
   }
 }
 
