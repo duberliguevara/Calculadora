@@ -232,7 +232,7 @@ function renderClientCard(client) {
     <div class="client-name">${escapeHtml(client.nombre)}</div>
     <div class="client-meta">${escapeHtml(client.contacto || "Sin contacto")}</div>
     <div class="client-meta">Vence: ${client.fechaVencimiento} · ${formatMoney(Number(client.monto) || 0)}${client.planNombre ? ` · ${escapeHtml(client.planNombre)}` : ""}</div>
-    ${client.perfilPin ? `<div class="client-meta">Perfil/PIN: ${escapeHtml(client.perfilPin)}</div>` : ""}
+    ${client.credenciales ? `<div class="client-meta">Acceso: ${escapeHtml(client.credenciales)}</div>` : ""}
     ${servicios.length ? `<div class="service-tags">${servicios.map((s) => `<span class="service-tag">${escapeHtml(s)}</span>`).join("")}</div>` : ""}
   `;
 
@@ -544,7 +544,7 @@ function openModal(client) {
     document.getElementById("field-monto").value = client.monto ?? "";
     document.getElementById("field-vencimiento").value = client.fechaVencimiento || todayISO();
     document.getElementById("field-ciclo").value = client.cicloDias ?? 30;
-    document.getElementById("field-perfil").value = client.perfilPin || "";
+    document.getElementById("field-credenciales").value = client.credenciales || "";
     document.getElementById("field-email-netflix").value = client.emailNetflix || "";
     els.fieldPlan.value = client.planId || "";
     setCheckedServices(els.serviceChecks, client.servicios);
@@ -571,7 +571,7 @@ els.clientForm.addEventListener("submit", async (e) => {
     monto: Number(document.getElementById("field-monto").value) || 0,
     fechaVencimiento: document.getElementById("field-vencimiento").value,
     cicloDias: Number(document.getElementById("field-ciclo").value) || 30,
-    perfilPin: document.getElementById("field-perfil").value.trim(),
+    credenciales: document.getElementById("field-credenciales").value.trim(),
     emailNetflix: document.getElementById("field-email-netflix").value.trim(),
     servicios: getCheckedServices(els.serviceChecks),
     planId: selectedPlan ? selectedPlan.id : null,

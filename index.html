@@ -174,12 +174,13 @@
         <input id="field-ciclo" type="number" min="1" step="1" value="30">
       </div>
       <div class="field">
-        <label for="field-perfil">Perfil/PIN (si incluye Netflix)</label>
-        <input id="field-perfil" type="text" placeholder="Ej. Perfil 3 · PIN 1234">
+        <label for="field-credenciales">Datos de acceso para el cliente</label>
+        <textarea id="field-credenciales" rows="2" placeholder="Ej. Perfil 3 · PIN 1234, o correo/clave si aplica"></textarea>
+        <p class="field-hint">Esto se le muestra al cliente en el portal, junto al botón de cada plataforma.</p>
       </div>
       <div class="field">
         <label for="field-email-netflix">Email con el que aceptó la invitación de Netflix</label>
-        <input id="field-email-netflix" type="email" placeholder="Necesario para el bot automático de Netflix">
+        <input id="field-email-netflix" type="email" placeholder="Solo si usas el bot automático de Netflix">
       </div>
       <div class="modal-actions">
         <button type="button" id="cancel-modal-btn" class="btn secondary">Cancelar</button>

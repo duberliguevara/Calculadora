@@ -131,6 +131,26 @@ body {
   padding: 10px 12px; font-size: 0.85rem; margin-bottom: 14px; min-height: 1.2em;
 }
 
+.credentials-box {
+  background: var(--info-bg, #dbeafe);
+  color: var(--info-ink, #1e40af);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin: 14px 0;
+}
+.credentials-label { font-size: 0.78rem; font-weight: 700; display: block; margin-bottom: 6px; }
+.credentials-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.credentials-value {
+  font-family: monospace;
+  font-size: 0.95rem;
+  letter-spacing: 1px;
+  flex: 1;
+  min-width: 100px;
+  word-break: break-all;
+}
+.credentials-box .btn.secondary.small { border-color: currentColor; color: inherit; padding: 6px 10px; font-size: 0.78rem; }
+.credentials-copied { font-size: 0.75rem; opacity: 0.85; }
+
 .access-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));

@@ -156,7 +156,7 @@ function registerPaymentFunctions({ admin, db, readSecret }) {
           planId: checkout.planId,
           planNombre: checkout.planNombre,
           servicios: checkout.servicios,
-          perfilPin: "",
+          credenciales: "",
           emailNetflix: "",
           bloqueadoManual: false,
           historialPagos: [{ fecha: fechaPago, monto: checkout.precio }],

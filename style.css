@@ -89,12 +89,19 @@ button, input, select {
   font-weight: 600;
   color: var(--muted);
 }
-.field input, .field select {
+.field input, .field select, .field textarea {
   padding: 10px 12px;
   border-radius: 10px;
   border: 1px solid var(--border);
   background: var(--bg);
   color: var(--ink);
+  font-family: inherit;
+  resize: vertical;
+}
+.field-hint {
+  margin: 0;
+  font-size: 0.76rem;
+  color: var(--muted);
 }
 .btn {
   cursor: pointer;
