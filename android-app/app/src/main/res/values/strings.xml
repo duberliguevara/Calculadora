@@ -10,6 +10,7 @@
     <string name="label_camera">Cámara</string>
     <string name="label_quality">Calidad</string>
     <string name="label_share_audio">Compartir audio (micrófono)</string>
+    <string name="label_protocol">Protocolo</string>
     <string name="notification_channel_name">Transmisión de cámara</string>
     <string name="notification_title">CamStream activo</string>
     <string name="notification_text">Transmitiendo la cámara a la PC</string>

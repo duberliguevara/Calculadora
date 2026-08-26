@@ -15,7 +15,7 @@ private const val PREFS_NAME = "camstream_prefs"
 private const val PREF_CAMERA_ID = "camera_id"
 private const val PREF_QUALITY_KEY = "quality_key"
 private const val PREF_AUDIO_ENABLED = "audio_enabled"
-private const val RTMP_PORT = 1935
+private const val PREF_PROTOCOL_KEY = "protocol_key"
 private const val STREAM_PATH = "camstream"
 
 /**
@@ -33,6 +33,7 @@ class MainActivity : AppCompatActivity(), StreamStatus.Listener {
     private var cameraOptions: List<CameraOption> = emptyList()
     private var selectedCameraId: String? = null
     private var selectedQuality: QualityPreset = QualityPreset.DEFAULT
+    private var selectedProtocol: StreamProtocol = StreamProtocol.DEFAULT
     private var currentState: StreamStatus.State = StreamStatus.State.IDLE
     private var discoveredPcIp: String? = null
     private val pcDiscovery = PcDiscoveryListener { ip -> onPcDiscovered(ip) }
@@ -54,6 +55,7 @@ class MainActivity : AppCompatActivity(), StreamStatus.Listener {
 
         setupCameraDropdown()
         setupQualityDropdown()
+        setupProtocolDropdown()
         setupAudioSwitch()
 
         binding.toggleButton.setOnClickListener {
@@ -130,6 +132,27 @@ class MainActivity : AppCompatActivity(), StreamStatus.Listener {
         }
     }
 
+    private fun setupProtocolDropdown() {
+        val labels = StreamProtocol.entries.map { it.label }
+        binding.protocolDropdown.setAdapter(ArrayAdapter(this, android.R.layout.simple_list_item_1, labels))
+
+        selectedProtocol = StreamProtocol.fromKey(prefs.getString(PREF_PROTOCOL_KEY, null))
+        binding.protocolDropdown.setText(selectedProtocol.label, false)
+        binding.protocolDescriptionText.text = selectedProtocol.description
+
+        binding.protocolDropdown.setOnItemClickListener { _, _, position, _ ->
+            val protocol = StreamProtocol.entries[position]
+            selectedProtocol = protocol
+            binding.protocolDescriptionText.text = protocol.description
+            prefs.edit().putString(PREF_PROTOCOL_KEY, protocol.key).apply()
+            if (isActiveState(currentState)) {
+                // Different port/scheme entirely; needs a full reconnect, same as a quality change.
+                stopStreamingService()
+                binding.root.postDelayed({ requestPermissionsAndStart() }, 400)
+            }
+        }
+    }
+
     private fun setupAudioSwitch() {
         binding.audioSwitch.isChecked = prefs.getBoolean(PREF_AUDIO_ENABLED, true)
         binding.audioSwitch.setOnCheckedChangeListener { _, checked ->
@@ -161,7 +184,7 @@ class MainActivity : AppCompatActivity(), StreamStatus.Listener {
 
     private fun beginStreaming() {
         val host = discoveredPcIp ?: "127.0.0.1"
-        val serverUrl = "rtmp://$host:$RTMP_PORT/$STREAM_PATH"
+        val serverUrl = selectedProtocol.buildUrl(host, STREAM_PATH)
         val intent = Intent(this, RtmpStreamService::class.java).apply {
             action = RtmpStreamService.ACTION_START
             putExtra(RtmpStreamService.EXTRA_CAMERA_ID, selectedCameraId)

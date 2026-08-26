@@ -431,7 +431,7 @@ webrtcTrackGatherTimeout: 2s
 # Global settings -> SRT server
 
 # Enable the SRT server, which allows to publish and read streams with the SRT protocol.
-srt: false
+srt: true
 # Address of the UDP/SRT listener.
 srtAddress: :8890
 

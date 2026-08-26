@@ -32,11 +32,13 @@ import urllib.request
 from tkinter import messagebox, ttk
 
 RTMP_PORT = 1935
+SRT_PORT = 8890
 API_PORT = 9997
 CONTROL_PORT = 8090
 PC_ANNOUNCE_PORT = 8091
 STREAM_PATH = "camstream"
-OBS_URL = f"rtmp://127.0.0.1:{RTMP_PORT}/{STREAM_PATH}"
+RTMP_URL = f"rtmp://127.0.0.1:{RTMP_PORT}/{STREAM_PATH}"
+SRT_URL = f"srt://127.0.0.1:{SRT_PORT}?streamid=read:{STREAM_PATH}"
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MEDIAMTX_EXE = os.path.join(BASE_DIR, "mediamtx", "mediamtx.exe")
@@ -154,17 +156,19 @@ def phone_is_publishing() -> bool:
         return False
 
 
-def get_phone_ip() -> str | None:
+def get_active_connection() -> tuple[str, str] | None:
     """MediaMTX already knows who is publishing to it — no need to ask the
-    user to type the phone's IP separately."""
-    try:
-        items = api_get("/v3/rtmpconns/list").get("items", [])
-        for item in items:
-            remote = item.get("remoteAddr", "")
-            if ":" in remote:
-                return remote.rsplit(":", 1)[0]
-    except Exception:
-        pass
+    user to type the phone's IP separately. Checks both protocols since the
+    phone can publish via either; returns (protocol, ip) or None."""
+    for protocol, endpoint in (("rtmp", "/v3/rtmpconns/list"), ("srt", "/v3/srtconns/list")):
+        try:
+            items = api_get(endpoint).get("items", [])
+            for item in items:
+                remote = item.get("remoteAddr", "")
+                if ":" in remote:
+                    return protocol, remote.rsplit(":", 1)[0]
+        except Exception:
+            continue
     return None
 
 
@@ -268,12 +272,12 @@ class CompanionApp:
         )
         self.stop_button.pack(anchor="w", padx=8, pady=(4, 8))
 
-        result_frame = ttk.LabelFrame(root, text="URL para OBS (Fuente de Media)")
-        result_frame.pack(fill="x", **pad)
+        self.result_frame = ttk.LabelFrame(root, text="URL para OBS (fuente 'Multimedia') — RTMP")
+        self.result_frame.pack(fill="x", **pad)
 
-        url_row = ttk.Frame(result_frame)
+        url_row = ttk.Frame(self.result_frame)
         url_row.pack(fill="x", padx=8, pady=8)
-        self.url_var = tk.StringVar(value=OBS_URL)
+        self.url_var = tk.StringVar(value=RTMP_URL)
         url_entry = ttk.Entry(url_row, textvariable=self.url_var, state="readonly", width=40)
         url_entry.pack(side="left", fill="x", expand=True)
         ttk.Button(url_row, text="Copiar", command=self.copy_url).pack(side="left", padx=(8, 0))
@@ -312,22 +316,30 @@ class CompanionApp:
     # --- remote control ---
 
     def _refresh_remote_control(self):
-        phone_ip = get_phone_ip()
-        if not phone_ip:
+        connection = get_active_connection()
+        if not connection:
             return
+        protocol, phone_ip = connection
         try:
             status = phone_control_get(phone_ip, "/status")
         except Exception:
             self.root.after(0, lambda: self._set_controls_enabled(False))
             return
         self.phone_ip = phone_ip
-        self.root.after(0, lambda: self._apply_status(status))
+        self.root.after(0, lambda: self._apply_status(status, protocol))
 
-    def _apply_status(self, status: dict):
+    def _apply_status(self, status: dict, protocol: str):
         self.cameras = status.get("cameras", [])
         self.qualities = status.get("qualities", [])
         self._set_controls_enabled(True)
         self.control_status.config(text=f"🟢 Controlando celular en {self.phone_ip}")
+
+        if protocol == "srt":
+            self.url_var.set(SRT_URL)
+            self.result_frame.config(text="URL para OBS (fuente 'Multimedia') — SRT, bajo retraso")
+        else:
+            self.url_var.set(RTMP_URL)
+            self.result_frame.config(text="URL para OBS (fuente 'Multimedia') — RTMP")
 
         self._updating_controls = True
         try:
