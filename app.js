@@ -26,14 +26,13 @@ const els = {
   cancelModalBtn: document.getElementById("cancel-modal-btn"),
   fieldPlan: document.getElementById("field-plan"),
   serviceChecks: document.getElementById("service-checks"),
-  managePlansBtn: document.getElementById("nav-plans-btn"),
   navClientesBtn: document.getElementById("nav-clientes-btn"),
   navPlansBtn: document.getElementById("nav-plans-btn"),
-  plansModalBackdrop: document.getElementById("plans-modal-backdrop"),
+  clientsView: document.getElementById("clients-view"),
+  plansView: document.getElementById("plans-view"),
   planList: document.getElementById("plan-list"),
   planForm: document.getElementById("plan-form"),
   planServiceChecks: document.getElementById("plan-service-checks"),
-  closePlansBtn: document.getElementById("close-plans-btn"),
   planError: document.getElementById("plan-error"),
 };
 
@@ -375,30 +374,16 @@ function setCheckedServices(container, servicios) {
   });
 }
 
-function setActiveNav(activeBtn) {
-  els.navClientesBtn.classList.toggle("active", activeBtn === els.navClientesBtn);
-  els.navPlansBtn.classList.toggle("active", activeBtn === els.navPlansBtn);
+function showView(view) {
+  els.navClientesBtn.classList.toggle("active", view === "clientes");
+  els.navPlansBtn.classList.toggle("active", view === "planes");
+  els.clientsView.classList.toggle("hidden", view !== "clientes");
+  els.plansView.classList.toggle("hidden", view !== "planes");
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-els.navPlansBtn.addEventListener("click", () => {
-  els.plansModalBackdrop.classList.remove("hidden");
-  setActiveNav(els.navPlansBtn);
-});
-els.navClientesBtn.addEventListener("click", () => {
-  els.plansModalBackdrop.classList.add("hidden");
-  setActiveNav(els.navClientesBtn);
-  window.scrollTo({ top: 0, behavior: "smooth" });
-});
-els.closePlansBtn.addEventListener("click", () => {
-  els.plansModalBackdrop.classList.add("hidden");
-  setActiveNav(els.navClientesBtn);
-});
-els.plansModalBackdrop.addEventListener("click", (e) => {
-  if (e.target === els.plansModalBackdrop) {
-    els.plansModalBackdrop.classList.add("hidden");
-    setActiveNav(els.navClientesBtn);
-  }
-});
+els.navPlansBtn.addEventListener("click", () => showView("planes"));
+els.navClientesBtn.addEventListener("click", () => showView("clientes"));
 
 els.planForm.addEventListener("submit", async (e) => {
   e.preventDefault();

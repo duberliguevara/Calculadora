@@ -402,3 +402,16 @@ button, input, select {
   margin-top: 18px;
 }
 .modal-actions .btn { flex: 1; }
+
+.plan-form-card {
+  max-width: 420px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 22px;
+  box-shadow: var(--shadow);
+}
+.plan-form-card h2 {
+  margin: 0 0 16px;
+  font-size: 1.1rem;
+}
