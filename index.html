@@ -39,11 +39,18 @@
 
 <div id="app-shell" class="hidden">
   <header class="app-header">
-    <div>
-      <h1>Clientes Streaming</h1>
-      <div class="user-email" id="user-email"></div>
+    <div class="app-header-top">
+      <div>
+        <h1>Clientes Streaming</h1>
+        <div class="user-email" id="user-email"></div>
+      </div>
+      <button id="logout-btn" class="btn secondary">Cerrar sesión</button>
     </div>
-    <button id="logout-btn" class="btn secondary">Cerrar sesión</button>
+    <nav class="app-nav">
+      <button type="button" class="nav-btn active" id="nav-clientes-btn">Clientes</button>
+      <button type="button" class="nav-btn" id="nav-plans-btn">Planes y combos</button>
+      <a class="nav-btn" href="portal/" target="_blank" rel="noopener">Portal de clientes ↗</a>
+    </nav>
   </header>
 
   <div class="container">
@@ -75,7 +82,6 @@
         <option value="vencido">Vencido</option>
         <option value="bloqueado">Bloqueado</option>
       </select>
-      <button id="manage-plans-btn" class="btn secondary">Planes y combos</button>
       <button id="new-client-btn" class="btn">+ Nuevo cliente</button>
     </div>
 

@@ -136,12 +136,14 @@ button, input, select {
   position: sticky;
   top: 0;
   z-index: 5;
+  padding: 16px 20px 0;
+  background: var(--header-grad);
+  color: #fff;
+}
+.app-header-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
-  background: var(--header-grad);
-  color: #fff;
 }
 .app-header h1 {
   font-size: 1.1rem;
@@ -155,6 +157,31 @@ button, input, select {
 .app-header .btn.secondary {
   border-color: rgba(255,255,255,0.6);
   color: #fff;
+}
+
+.app-nav {
+  display: flex;
+  gap: 4px;
+  margin-top: 14px;
+  overflow-x: auto;
+}
+.nav-btn {
+  appearance: none;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: rgba(255,255,255,0.75);
+  font-weight: 700;
+  font-size: 0.88rem;
+  padding: 9px 14px;
+  border-radius: 10px 10px 0 0;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.nav-btn:hover { color: #fff; background: rgba(255,255,255,0.1); }
+.nav-btn.active {
+  color: var(--accent);
+  background: var(--bg);
 }
 
 .container {
