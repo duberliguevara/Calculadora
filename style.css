@@ -403,6 +403,39 @@ button, input, select {
 }
 .modal-actions .btn { flex: 1; }
 
+.plans-section { margin-bottom: 28px; }
+.plans-section h2 { margin: 0 0 4px; font-size: 1.05rem; }
+.plans-section .muted { color: var(--muted); font-size: 0.85rem; margin: 0 0 14px; }
+
+.individual-price-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 420px;
+  margin-bottom: 8px;
+}
+.individual-price-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 14px;
+  box-shadow: var(--shadow);
+}
+.individual-price-row .platform-name { flex: 1; font-weight: 700; }
+.individual-price-row input {
+  width: 90px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--ink);
+}
+.individual-price-row .btn { padding: 8px 12px; font-size: 0.82rem; }
+.individual-price-row .save-status { font-size: 0.75rem; color: var(--ok-ink); min-width: 16px; }
+
 .plan-form-card {
   max-width: 420px;
   background: var(--panel);
