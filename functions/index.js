@@ -7,6 +7,7 @@ const { SecretManagerServiceClient } = require("@google-cloud/secret-manager");
 const chromium = require("@sparticuz/chromium");
 const puppeteer = require("puppeteer-core");
 const { login, isLoggedIn, removeExtraMember } = require("./lib/netflixAutomation");
+const { registerPaymentFunctions } = require("./payments");
 
 admin.initializeApp();
 setGlobalOptions({ region: "us-central1" });
@@ -93,6 +94,14 @@ async function runRemoval(clientId, client) {
   }
 }
 
+const { createCheckoutPreference, mercadoPagoWebhook } = registerPaymentFunctions({
+  admin,
+  db,
+  readSecret,
+});
+exports.createCheckoutPreference = createCheckoutPreference;
+exports.mercadoPagoWebhook = mercadoPagoWebhook;
+
 exports.removeNetflixExtraMember = onDocumentUpdated(
   { document: "clients/{clientId}", memory: "1GiB", timeoutSeconds: 300 },
   async (event) => {
@@ -103,8 +112,9 @@ exports.removeNetflixExtraMember = onDocumentUpdated(
     const justBlocked = !before.bloqueadoManual && after.bloqueadoManual;
     const retryRequested =
       before.netflixRemovalStatus !== "pending" && after.netflixRemovalStatus === "pending";
+    const incluyeNetflix = Array.isArray(after.servicios) && after.servicios.includes("Netflix");
 
-    if (!after.bloqueadoManual || (!justBlocked && !retryRequested)) {
+    if (!after.bloqueadoManual || !incluyeNetflix || (!justBlocked && !retryRequested)) {
       return;
     }
 

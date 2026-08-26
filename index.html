@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Gestor de Clientes Netflix</title>
-<meta name="description" content="Controla tus clientes de cuenta compartida: pagos, vencimientos y bloqueos.">
-<meta name="theme-color" content="#dc2626">
+<title>Gestor de Clientes Streaming</title>
+<meta name="description" content="Controla tus clientes de cuentas de streaming compartidas: pagos, vencimientos y bloqueos.">
+<meta name="theme-color" content="#7c3aed">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
@@ -40,7 +40,7 @@
 <div id="app-shell" class="hidden">
   <header class="app-header">
     <div>
-      <h1>Clientes Netflix</h1>
+      <h1>Clientes Streaming</h1>
       <div class="user-email" id="user-email"></div>
     </div>
     <button id="logout-btn" class="btn secondary">Cerrar sesión</button>
@@ -52,15 +52,15 @@
         <div class="num" id="stat-total">0</div>
         <div class="label">Clientes</div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card vencidos">
         <div class="num" id="stat-vencidos">0</div>
         <div class="label">Vencidos</div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card bloqueados">
         <div class="num" id="stat-bloqueados">0</div>
         <div class="label">Bloqueados</div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card ingresos">
         <div class="num" id="stat-ingresos">$0</div>
         <div class="label">Ingreso estimado</div>
       </div>
@@ -75,6 +75,7 @@
         <option value="vencido">Vencido</option>
         <option value="bloqueado">Bloqueado</option>
       </select>
+      <button id="manage-plans-btn" class="btn secondary">Planes y combos</button>
       <button id="new-client-btn" class="btn">+ Nuevo cliente</button>
     </div>
 
@@ -98,6 +99,23 @@
         <input id="field-contacto" type="text">
       </div>
       <div class="field">
+        <label for="field-plan">Plan / combo</label>
+        <select id="field-plan">
+          <option value="">Personalizado (elige servicios abajo)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Plataformas incluidas</label>
+        <div class="service-checks" id="service-checks">
+          <label><input type="checkbox" value="Netflix"> Netflix</label>
+          <label><input type="checkbox" value="Disney+"> Disney+</label>
+          <label><input type="checkbox" value="HBO Max"> HBO Max</label>
+          <label><input type="checkbox" value="Prime Video"> Prime Video</label>
+          <label><input type="checkbox" value="Star+"> Star+</label>
+          <label><input type="checkbox" value="Otro"> Otro</label>
+        </div>
+      </div>
+      <div class="field">
         <label for="field-monto">Monto que paga</label>
         <input id="field-monto" type="number" min="0" step="0.01" required>
       </div>
@@ -110,16 +128,48 @@
         <input id="field-ciclo" type="number" min="1" step="1" value="30">
       </div>
       <div class="field">
-        <label for="field-perfil">Perfil/PIN en Netflix</label>
+        <label for="field-perfil">Perfil/PIN (si incluye Netflix)</label>
         <input id="field-perfil" type="text" placeholder="Ej. Perfil 3 · PIN 1234">
       </div>
       <div class="field">
         <label for="field-email-netflix">Email con el que aceptó la invitación de Netflix</label>
-        <input id="field-email-netflix" type="email" placeholder="Necesario para el bot automático">
+        <input id="field-email-netflix" type="email" placeholder="Necesario para el bot automático de Netflix">
       </div>
       <div class="modal-actions">
         <button type="button" id="cancel-modal-btn" class="btn secondary">Cancelar</button>
         <button type="submit" class="btn">Guardar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="plans-modal-backdrop" class="modal-backdrop hidden">
+  <div class="modal">
+    <h2>Planes y combos</h2>
+    <div class="plan-list" id="plan-list"></div>
+    <form id="plan-form">
+      <div class="field">
+        <label for="plan-field-nombre">Nombre del plan</label>
+        <input id="plan-field-nombre" type="text" placeholder="Ej. Combo Cine" required>
+      </div>
+      <div class="field">
+        <label>Plataformas incluidas</label>
+        <div class="service-checks" id="plan-service-checks">
+          <label><input type="checkbox" value="Netflix"> Netflix</label>
+          <label><input type="checkbox" value="Disney+"> Disney+</label>
+          <label><input type="checkbox" value="HBO Max"> HBO Max</label>
+          <label><input type="checkbox" value="Prime Video"> Prime Video</label>
+          <label><input type="checkbox" value="Star+"> Star+</label>
+          <label><input type="checkbox" value="Otro"> Otro</label>
+        </div>
+      </div>
+      <div class="field">
+        <label for="plan-field-precio">Precio combinado</label>
+        <input id="plan-field-precio" type="number" min="0" step="0.01" required>
+      </div>
+      <div class="modal-actions">
+        <button type="button" id="close-plans-btn" class="btn secondary">Cerrar</button>
+        <button type="submit" class="btn">Agregar plan</button>
       </div>
     </form>
   </div>

@@ -1,0 +1,117 @@
+:root {
+  --bg1: #7c3aed;
+  --bg2: #ec4899;
+  --bg3: #f97316;
+  --panel: #ffffff;
+  --ink: #1c1e21;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  --accent: #7c3aed;
+  --accent2: #ec4899;
+  --accent-ink: #ffffff;
+  --ok-bg: #dcfce7; --ok-ink: #166534;
+  --warn-bg: #fef3c7; --warn-ink: #92400e;
+  --danger-bg: #fee2e2; --danger-ink: #991b1b;
+  --blocked-bg: #e5e7eb; --blocked-ink: #374151;
+  --info-bg: #dbeafe; --info-ink: #1e40af;
+  --shadow: 0 10px 30px rgba(0,0,0,0.18);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --panel: #1e1830;
+    --ink: #f2f2f2;
+    --muted: #a5a0b8;
+    --border: #332a4a;
+    --ok-bg: #14301f; --ok-ink: #86efac;
+    --warn-bg: #3a2c0c; --warn-ink: #fcd34d;
+    --danger-bg: #3a1414; --danger-ink: #fca5a5;
+    --blocked-bg: #2c2f34; --blocked-ink: #cbd5e1;
+    --info-bg: #1e2f4a; --info-ink: #93c5fd;
+  }
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+body {
+  background: linear-gradient(135deg, var(--bg1), var(--bg2) 55%, var(--bg3));
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.wrap { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 14px; }
+.hidden { display: none !important; }
+
+.card {
+  background: var(--panel);
+  color: var(--ink);
+  border-radius: 18px;
+  padding: 28px;
+  box-shadow: var(--shadow);
+}
+.card h1 { font-size: 1.3rem; margin: 0 0 6px; }
+.card h2 { font-size: 1.05rem; margin: 4px 0 14px; }
+.card p.sub { color: var(--muted); margin: 0 0 20px; font-size: 0.9rem; }
+.card p.muted { color: var(--muted); font-size: 0.85rem; }
+
+.field { margin-bottom: 14px; display: flex; flex-direction: column; gap: 6px; }
+.field label { font-size: 0.82rem; font-weight: 600; color: var(--muted); }
+.field input, .field select {
+  padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--panel); color: var(--ink); font-size: 1rem;
+}
+
+.btn {
+  cursor: pointer; border: none; border-radius: 10px; padding: 12px 16px;
+  font-weight: 700; font-size: 1rem;
+  background: linear-gradient(120deg, var(--accent), var(--accent2));
+  color: var(--accent-ink);
+}
+.btn.secondary { background: transparent; border: 1px solid var(--border); color: var(--ink); }
+.btn.full { width: 100%; }
+.btn.small { padding: 6px 10px; font-size: 0.8rem; }
+.btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.error-text { color: var(--danger-ink); font-size: 0.85rem; min-height: 1.1em; margin-top: 8px; }
+.setup-warning {
+  background: var(--warn-bg); color: var(--warn-ink); border-radius: 10px;
+  padding: 12px 14px; font-size: 0.82rem; margin-top: 16px; line-height: 1.4;
+}
+
+.account-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 18px; font-weight: 700;
+}
+
+.badge {
+  display: inline-block; padding: 4px 10px; border-radius: 999px;
+  font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.03em; margin: 6px 0;
+}
+.badge.al_dia { background: var(--ok-bg); color: var(--ok-ink); }
+.badge.por_vencer { background: var(--warn-bg); color: var(--warn-ink); }
+.badge.vencido { background: var(--danger-bg); color: var(--danger-ink); }
+.badge.bloqueado { background: var(--blocked-bg); color: var(--blocked-ink); }
+
+.status-plan { font-weight: 800; font-size: 1.1rem; }
+
+.service-tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.service-tag {
+  background: var(--info-bg); color: var(--info-ink); padding: 3px 9px;
+  border-radius: 999px; font-size: 0.72rem; font-weight: 700;
+}
+
+.plan-preview {
+  background: var(--bg, #f4f0fb); border: 1px dashed var(--border); border-radius: 10px;
+  padding: 10px 12px; font-size: 0.85rem; margin-bottom: 14px; min-height: 1.2em;
+}
+
+.banner {
+  border-radius: 12px; padding: 12px 16px; text-align: center; font-weight: 700;
+  color: #fff;
+}
+.banner.exito { background: #16a34a; }
+.banner.fallo { background: #dc2626; }
+.banner.pendiente { background: #d97706; }

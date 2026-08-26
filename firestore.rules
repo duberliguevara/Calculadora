@@ -1,17 +1,47 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isAdmin() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/system/config)
+        && request.auth.uid == get(/databases/$(database)/documents/system/config).data.adminUid;
+    }
+
     match /clients/{clientId} {
+      // El administrador tiene control total sobre sus propios clientes.
       allow read, update, delete: if request.auth != null
         && request.auth.uid == resource.data.ownerId;
       allow create: if request.auth != null
         && request.auth.uid == request.resource.data.ownerId;
+
+      // Un cliente que se registró solo en el portal puede leer (no editar)
+      // su propio registro, para ver su estado y fecha de vencimiento.
+      allow read: if request.auth != null
+        && request.auth.uid == resource.data.customerUid;
     }
 
-    // La colección "system" (p. ej. system/netflixSession, la sesión que usa
-    // el bot de Cloud Functions) NO tiene ninguna regla que la permita.
-    // Firestore deniega por defecto todo lo que no coincide con una regla
-    // explícita, así que el navegador nunca puede leerla; solo el SDK de
-    // administrador que usan las Cloud Functions puede tocarla.
+    match /plans/{planId} {
+      // Cualquier usuario con sesión iniciada puede ver los planes/combos
+      // (el portal los necesita para mostrar el catálogo a los clientes).
+      allow read: if request.auth != null;
+      // Solo el administrador puede crearlos/editarlos/borrarlos.
+      allow write: if isAdmin();
+    }
+
+    match /checkouts/{checkoutId} {
+      // Un cliente puede ver sus propios intentos de pago, pero nunca
+      // escribir aquí directamente: eso lo hacen solo las Cloud Functions
+      // (con el SDK de administrador, que no pasa por estas reglas), para
+      // que nadie pueda "regalarse" un pago aprobado desde el navegador.
+      allow read: if request.auth != null && request.auth.uid == resource.data.uid;
+      allow write: if false;
+    }
+
+    match /system/{docId} {
+      // Configuración interna (system/config con el UID del administrador,
+      // system/netflixSession con la sesión del bot). Nunca accesible desde
+      // el navegador, ni siquiera de lectura; solo el SDK de administrador.
+      allow read, write: if false;
+    }
   }
 }
