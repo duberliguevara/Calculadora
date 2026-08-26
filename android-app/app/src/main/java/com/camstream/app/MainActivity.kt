@@ -12,12 +12,18 @@ import androidx.core.content.ContextCompat
 import com.camstream.app.databinding.ActivityMainBinding
 
 private const val PREFS_NAME = "camstream_prefs"
-private const val PREF_SERVER_IP = "server_ip"
 private const val PREF_CAMERA_ID = "camera_id"
 private const val PREF_QUALITY_KEY = "quality_key"
 private const val RTMP_PORT = 1935
 private const val STREAM_PATH = "camstream"
 
+/**
+ * No PC IP is ever shown to the user. [discoveredPcIp] is filled in by
+ * [PcDiscoveryListener] when the PC companion is reachable over WiFi; if
+ * nothing was heard by the time streaming starts, we fall back to
+ * 127.0.0.1, which only resolves to the PC when it's connected over USB
+ * with `adb reverse` active (the companion sets that up automatically).
+ */
 class MainActivity : AppCompatActivity(), StreamStatus.Listener {
 
     private lateinit var binding: ActivityMainBinding
@@ -27,6 +33,7 @@ class MainActivity : AppCompatActivity(), StreamStatus.Listener {
     private var selectedCameraId: String? = null
     private var selectedQuality: QualityPreset = QualityPreset.DEFAULT
     private var currentState: StreamStatus.State = StreamStatus.State.IDLE
+    private var discoveredPcIp: String? = null
     private val pcDiscovery = PcDiscoveryListener { ip -> onPcDiscovered(ip) }
 
     private val permissionLauncher = registerForActivityResult(
@@ -46,10 +53,9 @@ class MainActivity : AppCompatActivity(), StreamStatus.Listener {
 
         setupCameraDropdown()
         setupQualityDropdown()
-        binding.serverIpInput.setText(prefs.getString(PREF_SERVER_IP, ""))
 
         binding.toggleButton.setOnClickListener {
-            if (isActiveState(currentState)) stopStreamingService() else validateAndStart()
+            if (isActiveState(currentState)) stopStreamingService() else requestPermissionsAndStart()
         }
     }
 
@@ -67,10 +73,9 @@ class MainActivity : AppCompatActivity(), StreamStatus.Listener {
 
     private fun onPcDiscovered(ip: String) {
         runOnUiThread {
-            val current = binding.serverIpInput.text?.toString()?.trim().orEmpty()
-            if (current.isEmpty()) {
-                binding.serverIpInput.setText(ip)
-                Toast.makeText(this, getString(R.string.pc_detected, ip), Toast.LENGTH_SHORT).show()
+            if (discoveredPcIp != ip) {
+                discoveredPcIp = ip
+                binding.pcStatusText.text = getString(R.string.pc_detected, ip)
             }
         }
     }
@@ -118,19 +123,9 @@ class MainActivity : AppCompatActivity(), StreamStatus.Listener {
             if (isActiveState(currentState)) {
                 // Resolution/bitrate can't change on the fly; restart with the new preset.
                 stopStreamingService()
-                binding.root.postDelayed({ validateAndStart() }, 400)
+                binding.root.postDelayed({ requestPermissionsAndStart() }, 400)
             }
         }
-    }
-
-    private fun validateAndStart() {
-        val ip = binding.serverIpInput.text?.toString()?.trim().orEmpty()
-        if (ip.isEmpty()) {
-            Toast.makeText(this, R.string.missing_server_ip, Toast.LENGTH_LONG).show()
-            return
-        }
-        prefs.edit().putString(PREF_SERVER_IP, ip).apply()
-        requestPermissionsAndStart()
     }
 
     private fun requestPermissionsAndStart() {
@@ -149,8 +144,8 @@ class MainActivity : AppCompatActivity(), StreamStatus.Listener {
     }
 
     private fun beginStreaming() {
-        val ip = binding.serverIpInput.text?.toString()?.trim().orEmpty()
-        val serverUrl = "rtmp://$ip:$RTMP_PORT/$STREAM_PATH"
+        val host = discoveredPcIp ?: "127.0.0.1"
+        val serverUrl = "rtmp://$host:$RTMP_PORT/$STREAM_PATH"
         val intent = Intent(this, RtmpStreamService::class.java).apply {
             action = RtmpStreamService.ACTION_START
             putExtra(RtmpStreamService.EXTRA_CAMERA_ID, selectedCameraId)
@@ -185,6 +180,10 @@ class MainActivity : AppCompatActivity(), StreamStatus.Listener {
             }
             binding.statusText.text = text
             binding.statusText.setTextColor(color)
+
+            if (discoveredPcIp == null) {
+                binding.pcStatusText.text = getString(R.string.pc_searching)
+            }
 
             // Reflect changes the PC companion made remotely, so the dropdowns never go stale.
             cameraId?.let { id ->

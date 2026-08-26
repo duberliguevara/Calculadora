@@ -9,12 +9,11 @@
     <string name="status_error">Error: %1$s</string>
     <string name="label_camera">Cámara</string>
     <string name="label_quality">Calidad</string>
-    <string name="label_server_ip">IP de la PC</string>
-    <string name="hint_server_ip">Es la IP que muestra el programa CamStream Companion en tu PC. Puerto 1935 fijo.</string>
     <string name="notification_channel_name">Transmisión de cámara</string>
     <string name="notification_title">CamStream activo</string>
     <string name="notification_text">Transmitiendo la cámara a la PC</string>
     <string name="camera_permission_needed">Se necesita permiso de cámara para transmitir</string>
-    <string name="missing_server_ip">Escribe la IP de la PC antes de iniciar</string>
-    <string name="pc_detected">PC detectada: %1$s</string>
+    <string name="pc_searching">Buscando la PC en la red…</string>
+    <string name="pc_detected">PC detectada (%1$s) — lista para transmitir</string>
+    <string name="pc_fallback">PC no detectada aún; se intentará por USB si está conectado</string>
 </resources>

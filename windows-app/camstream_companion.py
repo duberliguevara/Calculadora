@@ -4,16 +4,17 @@ CamStream Companion - recibe el video H.264/RTMP que transmite el celular
 También controla el celular a distancia (cámara/calidad/detener) para no
 tener que agarrarlo durante el stream.
 
-Qué hace:
+Todo es automático — nunca hay que escribir ninguna IP, ni en el celular
+ni acá:
   - Arranca un mini servidor de video local (MediaMTX) que solo actúa de
     relevo: el celular le empuja el video (RTMP publish) y OBS lo toma de
     ahí (RTMP play) — por eso la URL para OBS es siempre la misma:
     rtmp://127.0.0.1:1935/camstream
   - Se anuncia por broadcast UDP en la red para que la app del celular
-    detecte la IP de esta PC sola (no hay que escribirla).
-  - Para USB: hace `adb reverse` para que el celular pueda llegar al
-    servidor por el cable aunque no haya WiFi.
-  - Detecta la IP del celular (via la propia MediaMTX, que sabe quién le
+    detecte la IP de esta PC sola (WiFi).
+  - Detecta el cable USB solo (sondea `adb devices` cada 2s) y configura
+    `adb reverse`/`adb forward` sin que haya que apretar nada.
+  - Detecta la IP del celular (vía la propia MediaMTX, que sabe quién le
     está publicando) y, una vez conectado, deja cambiar cámara/calidad o
     detener la transmisión sin tocar el teléfono.
 """
@@ -185,6 +186,7 @@ class CompanionApp:
         self.cameras: list[dict] = []
         self.qualities: list[dict] = []
         self._updating_controls = False  # guard against re-sending our own dropdown refreshes
+        self._usb_configured = False  # avoid re-running adb reverse/forward every poll tick
 
         pad = {"padx": 16, "pady": 8}
 
@@ -212,7 +214,7 @@ class CompanionApp:
 
         ttk.Label(
             wifi_frame,
-            text="Esta PC se anuncia sola en la red — la app del celular\ndetecta la IP automáticamente. Si no, escribe esto ahí:",
+            text="Esta PC se anuncia sola en la red — la app del celular\nla detecta automáticamente, no hay nada que escribir.",
         ).pack(anchor="w", padx=8, pady=(6, 2))
 
         ip_row = ttk.Frame(wifi_frame)
@@ -225,12 +227,8 @@ class CompanionApp:
         usb_frame = ttk.LabelFrame(root, text="Conexión por USB (alternativa sin WiFi)")
         usb_frame.pack(fill="x", **pad)
 
-        self.usb_status = ttk.Label(usb_frame, text="Sin verificar")
-        self.usb_status.pack(anchor="w", padx=8, pady=4)
-
-        ttk.Button(usb_frame, text="Conectar por USB", command=self.connect_usb).pack(
-            anchor="w", padx=8, pady=(0, 8)
-        )
+        self.usb_status = ttk.Label(usb_frame, text="⚪ Sin cable conectado")
+        self.usb_status.pack(anchor="w", padx=8, pady=(6, 8))
 
         control_frame = ttk.LabelFrame(root, text="Control remoto (sin tocar el celular)")
         control_frame.pack(fill="x", **pad)
@@ -270,12 +268,14 @@ class CompanionApp:
         ttk.Button(url_row, text="Copiar", command=self.copy_url).pack(side="left", padx=(8, 0))
 
         if not self.adb_path:
-            self.usb_status.config(text="No se encontró adb.exe (revisa Android SDK platform-tools)")
+            self.usb_status.config(text="⚪ USB no disponible (no se encontró adb.exe)")
 
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
         self._start_server()
         self.pc_announcer.start()
         self._poll_status()
+        if self.adb_path:
+            self._poll_usb()
 
     # --- server lifecycle ---
 
@@ -380,29 +380,35 @@ class CompanionApp:
         except Exception:
             pass  # next status poll will reflect whatever actually happened
 
-    # --- USB ---
+    # --- USB (fully automatic: no button, just polls adb every 2s) ---
 
-    def connect_usb(self):
-        if not self.adb_path:
-            messagebox.showerror("adb no encontrado", "No se encontró adb.exe. Instala Android SDK Platform-Tools.")
-            return
+    def _poll_usb(self):
+        threading.Thread(target=self._check_usb_once, daemon=True).start()
+        self.root.after(2000, self._poll_usb)
+
+    def _check_usb_once(self):
         try:
             devices = subprocess.run(
-                [self.adb_path, "devices"], capture_output=True, text=True, timeout=10
+                [self.adb_path, "devices"], capture_output=True, text=True, timeout=5
             ).stdout
-        except Exception as exc:
-            messagebox.showerror("Error", f"No se pudo ejecutar adb: {exc}")
+        except Exception:
             return
 
         lines = [l for l in devices.strip().splitlines()[1:] if l.strip()]
         if not lines:
-            self.usb_status.config(text="Ningún dispositivo detectado. Conecta el cable y habilita depuración USB.")
+            self._usb_configured = False
+            self.root.after(0, lambda: self.usb_status.config(text="⚪ Sin cable conectado"))
             return
 
-        device_line = lines[0]
-        if "unauthorized" in device_line:
-            self.usb_status.config(text="Autoriza la depuración USB en el celular y vuelve a intentar.")
+        if "unauthorized" in lines[0]:
+            self._usb_configured = False
+            self.root.after(
+                0, lambda: self.usb_status.config(text="🟡 Autoriza la depuración USB en el celular")
+            )
             return
+
+        if self._usb_configured:
+            return  # already set up for this connection; nothing to do
 
         try:
             # reverse: lets the phone's RTMP push (phone -> 127.0.0.1:1935) reach our server.
@@ -415,11 +421,12 @@ class CompanionApp:
                 [self.adb_path, "forward", f"tcp:{CONTROL_PORT}", f"tcp:{CONTROL_PORT}"],
                 check=True, capture_output=True, text=True, timeout=10,
             )
-        except subprocess.CalledProcessError as exc:
-            messagebox.showerror("Error", f"Falló la conexión: {exc.stderr}")
+        except subprocess.CalledProcessError:
+            self.root.after(0, lambda: self.usb_status.config(text="🟡 Cable detectado, reintentando conexión…"))
             return
 
-        self.usb_status.config(text="Conectado — en la app, pon '127.0.0.1' como IP de la PC.")
+        self._usb_configured = True
+        self.root.after(0, lambda: self.usb_status.config(text="🟢 Celular conectado por USB"))
 
     # --- common ---
 
@@ -438,9 +445,37 @@ class CompanionApp:
         self.root.destroy()
 
 
+INSTANCE_LOCK_PORT = 8093
+
+
+def acquire_single_instance_lock() -> socket.socket | None:
+    """Held for the app's whole lifetime. If the port's already taken, another
+    copy (old or new) is running — binding fails immediately, no timeout."""
+    try:
+        lock_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        lock_socket.bind(("127.0.0.1", INSTANCE_LOCK_PORT))
+        lock_socket.listen(1)
+        return lock_socket
+    except OSError:
+        return None
+
+
 if __name__ == "__main__":
     if sys.platform != "win32":
         print("Este companion está pensado para Windows (usa mediamtx.exe y adb.exe de Windows).")
+
+    _lock = acquire_single_instance_lock()
+    if _lock is None:
+        tk.Tk().withdraw()
+        messagebox.showwarning(
+            "CamStream Companion ya está corriendo",
+            "Ya hay una copia abierta (puede ser una ventana vieja escondida).\n\n"
+            "Ciérrala desde la bandeja/barra de tareas, o abre el Administrador de "
+            "tareas y termina cualquier proceso 'python' o 'mediamtx' suelto, antes "
+            "de abrir una nueva.",
+        )
+        sys.exit(1)
+
     root = tk.Tk()
     CompanionApp(root)
     root.mainloop()
