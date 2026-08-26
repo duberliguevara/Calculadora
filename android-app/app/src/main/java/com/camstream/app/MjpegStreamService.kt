@@ -33,6 +33,7 @@ class MjpegStreamService : LifecycleService() {
     private val latestFrame = AtomicReference<ByteArray?>(null)
     private var cameraProvider: ProcessCameraProvider? = null
     private var mjpegServer: MjpegServer? = null
+    private var discoveryBroadcaster: DeviceDiscoveryBroadcaster? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -55,6 +56,7 @@ class MjpegStreamService : LifecycleService() {
         startForeground(NOTIFICATION_ID, buildNotification())
 
         mjpegServer = MjpegServer(StreamStatus.PORT) { latestFrame.get() }.also { it.start() }
+        discoveryBroadcaster = DeviceDiscoveryBroadcaster(StreamStatus.PORT).also { it.start() }
 
         val providerFuture = ProcessCameraProvider.getInstance(this)
         providerFuture.addListener({
@@ -87,6 +89,8 @@ class MjpegStreamService : LifecycleService() {
     private fun stopStreaming() {
         mjpegServer?.stop()
         mjpegServer = null
+        discoveryBroadcaster?.stop()
+        discoveryBroadcaster = null
         cameraProvider?.unbindAll()
         cameraProvider = null
         StreamStatus.notifyChanged(false, null)
