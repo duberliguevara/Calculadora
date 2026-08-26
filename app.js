@@ -24,11 +24,20 @@ const els = {
   clientForm: document.getElementById("client-form"),
   modalTitle: document.getElementById("modal-title"),
   cancelModalBtn: document.getElementById("cancel-modal-btn"),
+  fieldPlan: document.getElementById("field-plan"),
+  serviceChecks: document.getElementById("service-checks"),
+  managePlansBtn: document.getElementById("manage-plans-btn"),
+  plansModalBackdrop: document.getElementById("plans-modal-backdrop"),
+  planList: document.getElementById("plan-list"),
+  planForm: document.getElementById("plan-form"),
+  planServiceChecks: document.getElementById("plan-service-checks"),
+  closePlansBtn: document.getElementById("close-plans-btn"),
 };
 
 let auth, db;
 let fb = {}; // holds the dynamically-loaded Firestore functions we call by name
 let clients = [];
+let plans = [];
 let currentUser = null;
 let editingId = null;
 
@@ -106,14 +115,17 @@ function handleAuthChange(user) {
     els.appShell.classList.remove("hidden");
     els.userEmail.textContent = user.email;
     subscribeClients(user.uid);
+    subscribePlans();
   } else {
     els.loginWrap.classList.remove("hidden");
     els.appShell.classList.add("hidden");
     clients = [];
+    plans = [];
   }
 }
 
 let unsubscribeClients = null;
+let unsubscribePlans = null;
 
 function subscribeClients(uid) {
   if (unsubscribeClients) unsubscribeClients();
@@ -121,6 +133,15 @@ function subscribeClients(uid) {
   unsubscribeClients = fb.onSnapshot(q, (snap) => {
     clients = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
     render();
+  });
+}
+
+function subscribePlans() {
+  if (unsubscribePlans) unsubscribePlans();
+  unsubscribePlans = fb.onSnapshot(fb.collection(db, "plans"), (snap) => {
+    plans = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    renderPlanOptions();
+    renderPlanList();
   });
 }
 
@@ -200,12 +221,14 @@ function renderClientCard(client) {
   const top = document.createElement("div");
   top.className = "client-top";
 
+  const servicios = Array.isArray(client.servicios) ? client.servicios : [];
   const left = document.createElement("div");
   left.innerHTML = `
     <div class="client-name">${escapeHtml(client.nombre)}</div>
     <div class="client-meta">${escapeHtml(client.contacto || "Sin contacto")}</div>
-    <div class="client-meta">Vence: ${client.fechaVencimiento} · ${formatMoney(Number(client.monto) || 0)}</div>
+    <div class="client-meta">Vence: ${client.fechaVencimiento} · ${formatMoney(Number(client.monto) || 0)}${client.planNombre ? ` · ${escapeHtml(client.planNombre)}` : ""}</div>
     ${client.perfilPin ? `<div class="client-meta">Perfil/PIN: ${escapeHtml(client.perfilPin)}</div>` : ""}
+    ${servicios.length ? `<div class="service-tags">${servicios.map((s) => `<span class="service-tag">${escapeHtml(s)}</span>`).join("")}</div>` : ""}
   `;
 
   const badge = document.createElement("span");
@@ -252,13 +275,25 @@ function renderBlockPanel(client) {
   const panel = document.createElement("div");
   panel.className = "block-checklist";
 
+  const servicios = Array.isArray(client.servicios) ? client.servicios : [];
+  const incluyeNetflix = servicios.includes("Netflix");
+  const otrosServicios = servicios.filter((s) => s !== "Netflix");
+
   const manualChecklist = `
     <ol>
-      <li>Entra a netflix.com/account con tu cuenta principal.</li>
-      <li>Ve a "Miembro extra" / "Gestionar acceso".</li>
-      <li>Selecciona a ${escapeHtml(client.nombre)} y elige "Eliminar" o "Pausar acceso".</li>
+      ${incluyeNetflix ? `<li>Netflix: entra a netflix.com/account → "Miembro extra" / "Gestionar acceso" → elige a ${escapeHtml(client.nombre)} y selecciona "Eliminar" o "Pausar acceso".</li>` : ""}
+      ${otrosServicios.map((s) => `<li>${escapeHtml(s)}: quítalo o pausa el acceso de ${escapeHtml(client.nombre)} manualmente (esa plataforma no tiene bot todavía).</li>`).join("")}
+      ${!servicios.length ? `<li>Retira el acceso de ${escapeHtml(client.nombre)} en la plataforma correspondiente.</li>` : ""}
     </ol>
   `;
+
+  if (!incluyeNetflix) {
+    panel.innerHTML = `
+      <strong>Pendiente por hacer</strong>
+      ${manualChecklist}
+    `;
+    return panel;
+  }
 
   if (client.netflixRemovalStatus === "in_progress") {
     panel.innerHTML = `<strong>🤖 El bot está intentando retirarlo de Netflix ahora mismo…</strong>`;
@@ -288,6 +323,86 @@ function renderBlockPanel(client) {
 async function retryNetflixRemoval(client) {
   await fb.updateDoc(fb.doc(db, "clients", client.id), { netflixRemovalStatus: "pending" });
 }
+
+/* ---------- Planes y combos ---------- */
+
+function renderPlanOptions() {
+  const current = els.fieldPlan.value;
+  els.fieldPlan.innerHTML = `<option value="">Personalizado (elige servicios abajo)</option>`;
+  for (const plan of plans) {
+    const opt = document.createElement("option");
+    opt.value = plan.id;
+    opt.textContent = `${plan.nombre} — ${formatMoney(Number(plan.precio) || 0)} (${(plan.servicios || []).join(", ")})`;
+    els.fieldPlan.appendChild(opt);
+  }
+  els.fieldPlan.value = current;
+}
+
+function renderPlanList() {
+  els.planList.innerHTML = "";
+  if (!plans.length) {
+    els.planList.innerHTML = `<div class="empty-state">Aún no tienes planes/combos creados.</div>`;
+    return;
+  }
+  for (const plan of plans) {
+    const card = document.createElement("div");
+    card.className = "plan-card";
+    card.innerHTML = `
+      <div>
+        <div class="plan-name">${escapeHtml(plan.nombre)}</div>
+        <div class="service-tags">${(plan.servicios || []).map((s) => `<span class="service-tag">${escapeHtml(s)}</span>`).join("")}</div>
+      </div>
+      <div class="plan-price">${formatMoney(Number(plan.precio) || 0)}</div>
+    `;
+    card.appendChild(
+      actionButton("Eliminar", "danger", () => deletePlan(plan))
+    );
+    els.planList.appendChild(card);
+  }
+}
+
+function getCheckedServices(container) {
+  return Array.from(container.querySelectorAll('input[type="checkbox"]:checked')).map((c) => c.value);
+}
+
+function setCheckedServices(container, servicios) {
+  const set = new Set(servicios || []);
+  container.querySelectorAll('input[type="checkbox"]').forEach((c) => {
+    c.checked = set.has(c.value);
+  });
+}
+
+els.managePlansBtn.addEventListener("click", () => {
+  els.plansModalBackdrop.classList.remove("hidden");
+});
+els.closePlansBtn.addEventListener("click", () => {
+  els.plansModalBackdrop.classList.add("hidden");
+});
+els.plansModalBackdrop.addEventListener("click", (e) => {
+  if (e.target === els.plansModalBackdrop) els.plansModalBackdrop.classList.add("hidden");
+});
+
+els.planForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const nombre = document.getElementById("plan-field-nombre").value.trim();
+  const precio = Number(document.getElementById("plan-field-precio").value) || 0;
+  const servicios = getCheckedServices(els.planServiceChecks);
+  if (!nombre || !servicios.length) return;
+  await fb.addDoc(fb.collection(db, "plans"), { nombre, precio, servicios });
+  els.planForm.reset();
+});
+
+async function deletePlan(plan) {
+  if (!confirm(`¿Eliminar el plan "${plan.nombre}"? Los clientes que ya lo tienen asignado no se modifican.`)) return;
+  await fb.deleteDoc(fb.doc(db, "plans", plan.id));
+}
+
+els.fieldPlan.addEventListener("change", () => {
+  const plan = plans.find((p) => p.id === els.fieldPlan.value);
+  if (!plan) return;
+  setCheckedServices(els.serviceChecks, plan.servicios);
+  document.getElementById("field-monto").value = plan.precio ?? "";
+});
 
 function actionButton(label, cls, onClick) {
   const btn = document.createElement("button");
@@ -349,9 +464,13 @@ function openModal(client) {
     document.getElementById("field-ciclo").value = client.cicloDias ?? 30;
     document.getElementById("field-perfil").value = client.perfilPin || "";
     document.getElementById("field-email-netflix").value = client.emailNetflix || "";
+    els.fieldPlan.value = client.planId || "";
+    setCheckedServices(els.serviceChecks, client.servicios);
   } else {
     document.getElementById("field-vencimiento").value = todayISO();
     document.getElementById("field-ciclo").value = 30;
+    els.fieldPlan.value = "";
+    setCheckedServices(els.serviceChecks, []);
   }
   els.modalBackdrop.classList.remove("hidden");
 }
@@ -363,6 +482,7 @@ function closeModal() {
 
 els.clientForm.addEventListener("submit", async (e) => {
   e.preventDefault();
+  const selectedPlan = plans.find((p) => p.id === els.fieldPlan.value) || null;
   const data = {
     nombre: document.getElementById("field-nombre").value.trim(),
     contacto: document.getElementById("field-contacto").value.trim(),
@@ -371,6 +491,9 @@ els.clientForm.addEventListener("submit", async (e) => {
     cicloDias: Number(document.getElementById("field-ciclo").value) || 30,
     perfilPin: document.getElementById("field-perfil").value.trim(),
     emailNetflix: document.getElementById("field-email-netflix").value.trim(),
+    servicios: getCheckedServices(els.serviceChecks),
+    planId: selectedPlan ? selectedPlan.id : null,
+    planNombre: selectedPlan ? selectedPlan.nombre : null,
   };
   if (!data.nombre || !data.fechaVencimiento) return;
 

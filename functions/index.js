@@ -103,8 +103,9 @@ exports.removeNetflixExtraMember = onDocumentUpdated(
     const justBlocked = !before.bloqueadoManual && after.bloqueadoManual;
     const retryRequested =
       before.netflixRemovalStatus !== "pending" && after.netflixRemovalStatus === "pending";
+    const incluyeNetflix = Array.isArray(after.servicios) && after.servicios.includes("Netflix");
 
-    if (!after.bloqueadoManual || (!justBlocked && !retryRequested)) {
+    if (!after.bloqueadoManual || !incluyeNetflix || (!justBlocked && !retryRequested)) {
       return;
     }
 

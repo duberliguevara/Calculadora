@@ -8,6 +8,15 @@ service cloud.firestore {
         && request.auth.uid == request.resource.data.ownerId;
     }
 
+    match /plans/{planId} {
+      // Cualquier usuario con sesión iniciada puede leer y escribir los
+      // planes/combos. Como hoy solo tú tienes cuenta, esto es seguro.
+      // TODO: cuando exista el portal de clientes (cuentas de compradores),
+      // restringir la escritura solo al administrador (por ejemplo con un
+      // custom claim o una colección "admins").
+      allow read, write: if request.auth != null;
+    }
+
     // La colección "system" (p. ej. system/netflixSession, la sesión que usa
     // el bot de Cloud Functions) NO tiene ninguna regla que la permita.
     // Firestore deniega por defecto todo lo que no coincide con una regla
