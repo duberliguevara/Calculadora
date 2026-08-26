@@ -6,6 +6,12 @@ const isConfigured = firebaseConfig.apiKey && firebaseConfig.apiKey !== "TU_API_
 const els = {
   loginCard: document.getElementById("login-card"),
   googleBtn: document.getElementById("google-btn"),
+  emailAuthForm: document.getElementById("email-auth-form"),
+  authEmail: document.getElementById("auth-email"),
+  authPassword: document.getElementById("auth-password"),
+  emailLoginBtn: document.getElementById("email-login-btn"),
+  emailSignupBtn: document.getElementById("email-signup-btn"),
+  forgotPasswordBtn: document.getElementById("forgot-password-btn"),
   loginError: document.getElementById("login-error"),
   setupWarning: document.getElementById("setup-warning"),
   accountCard: document.getElementById("account-card"),
@@ -79,6 +85,9 @@ async function init() {
     onAuthStateChanged: authModule.onAuthStateChanged,
     signInWithPopup: authModule.signInWithPopup,
     GoogleAuthProvider: authModule.GoogleAuthProvider,
+    signInWithEmailAndPassword: authModule.signInWithEmailAndPassword,
+    createUserWithEmailAndPassword: authModule.createUserWithEmailAndPassword,
+    sendPasswordResetEmail: authModule.sendPasswordResetEmail,
     signOut: authModule.signOut,
     collection: firestoreModule.collection,
     query: firestoreModule.query,
@@ -100,7 +109,57 @@ async function init() {
     }
   });
 
+  els.emailAuthForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    els.loginError.textContent = "";
+    try {
+      await fb.signInWithEmailAndPassword(auth, els.authEmail.value.trim(), els.authPassword.value);
+    } catch (err) {
+      els.loginError.textContent = traducirErrorAuth(err.code);
+    }
+  });
+
+  els.emailSignupBtn.addEventListener("click", async () => {
+    els.loginError.textContent = "";
+    if (!els.authEmail.value || !els.authPassword.value) {
+      els.loginError.textContent = "Escribe tu correo y una contraseña primero.";
+      return;
+    }
+    try {
+      await fb.createUserWithEmailAndPassword(auth, els.authEmail.value.trim(), els.authPassword.value);
+    } catch (err) {
+      els.loginError.textContent = traducirErrorAuth(err.code);
+    }
+  });
+
+  els.forgotPasswordBtn.addEventListener("click", async () => {
+    els.loginError.textContent = "";
+    if (!els.authEmail.value) {
+      els.loginError.textContent = "Escribe tu correo arriba y presiona este botón de nuevo.";
+      return;
+    }
+    try {
+      await fb.sendPasswordResetEmail(auth, els.authEmail.value.trim());
+      els.loginError.textContent = "Te enviamos un correo para restablecer tu contraseña.";
+    } catch (err) {
+      els.loginError.textContent = traducirErrorAuth(err.code);
+    }
+  });
+
   els.logoutBtn.addEventListener("click", () => fb.signOut(auth));
+}
+
+function traducirErrorAuth(code) {
+  const map = {
+    "auth/invalid-email": "Correo inválido.",
+    "auth/user-not-found": "No existe una cuenta con ese correo. Usa \"Crear cuenta\".",
+    "auth/wrong-password": "Contraseña incorrecta.",
+    "auth/invalid-credential": "Correo o contraseña incorrectos.",
+    "auth/email-already-in-use": "Ya existe una cuenta con ese correo. Usa \"Iniciar sesión\".",
+    "auth/weak-password": "La contraseña debe tener al menos 6 caracteres.",
+    "auth/too-many-requests": "Demasiados intentos. Espera un momento.",
+  };
+  return map[code] || "No se pudo completar la acción. Intenta de nuevo.";
 }
 
 function showSetupWarning(msg) {

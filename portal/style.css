@@ -74,6 +74,29 @@ body {
 .btn.small { padding: 6px 10px; font-size: 0.8rem; }
 .btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+.divider::before, .divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.auth-buttons { display: flex; gap: 10px; margin-top: 4px; }
+.auth-buttons .btn { flex: 1; padding: 10px; font-size: 0.9rem; }
+
+.link-btn {
+  background: none; border: none; color: var(--accent);
+  font-size: 0.82rem; padding: 10px 0 0; cursor: pointer; text-align: center; width: 100%;
+}
+
 .error-text { color: var(--danger-ink); font-size: 0.85rem; min-height: 1.1em; margin-top: 8px; }
 .setup-warning {
   background: var(--warn-bg); color: var(--warn-ink); border-radius: 10px;
