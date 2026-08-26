@@ -22,6 +22,11 @@ const els = {
   statusBadge: document.getElementById("status-badge"),
   statusVenc: document.getElementById("status-venc"),
   accountError: document.getElementById("account-error"),
+  credentialsBox: document.getElementById("credentials-box"),
+  credentialsValue: document.getElementById("credentials-value"),
+  credentialsToggle: document.getElementById("credentials-toggle"),
+  credentialsCopy: document.getElementById("credentials-copy"),
+  credentialsCopied: document.getElementById("credentials-copied"),
   accessGrid: document.getElementById("access-grid"),
   paywall: document.getElementById("paywall"),
   renewBtn: document.getElementById("renew-btn"),
@@ -269,6 +274,10 @@ function render() {
     els.paywall.classList.toggle("hidden", tieneAcceso);
     if (tieneAcceso) renderAccessGrid(myClient.servicios || []);
 
+    const tieneCredenciales = tieneAcceso && myClient.credenciales;
+    els.credentialsBox.classList.toggle("hidden", !tieneCredenciales);
+    if (tieneCredenciales) resetCredentialsDisplay();
+
     els.renewBtn.classList.toggle("hidden", estado === "al_dia");
     els.renewBtn.onclick = () => startCheckout(myClient.planId, myClient.nombre, myClient.contacto);
   } else {
@@ -297,6 +306,36 @@ function escapeHtml(str) {
   div.textContent = str ?? "";
   return div.innerHTML;
 }
+
+function maskCredentials(text) {
+  return text.replace(/\S/g, "•");
+}
+
+function resetCredentialsDisplay() {
+  els.credentialsValue.textContent = maskCredentials(myClient.credenciales);
+  els.credentialsValue.dataset.hidden = "true";
+  els.credentialsToggle.textContent = "Mostrar";
+  els.credentialsCopied.textContent = "";
+}
+
+els.credentialsToggle.addEventListener("click", () => {
+  if (!myClient || !myClient.credenciales) return;
+  const hidden = els.credentialsValue.dataset.hidden !== "false";
+  els.credentialsValue.textContent = hidden ? myClient.credenciales : maskCredentials(myClient.credenciales);
+  els.credentialsValue.dataset.hidden = hidden ? "false" : "true";
+  els.credentialsToggle.textContent = hidden ? "Ocultar" : "Mostrar";
+});
+
+els.credentialsCopy.addEventListener("click", async () => {
+  if (!myClient || !myClient.credenciales) return;
+  try {
+    await navigator.clipboard.writeText(myClient.credenciales);
+    els.credentialsCopied.textContent = "¡Copiado!";
+    setTimeout(() => { els.credentialsCopied.textContent = ""; }, 2000);
+  } catch {
+    els.credentialsCopied.textContent = "No se pudo copiar.";
+  }
+});
 
 els.signupForm.addEventListener("submit", async (e) => {
   e.preventDefault();
