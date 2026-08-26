@@ -20,10 +20,12 @@ class RtmpStreamService : LifecycleService(), ControlHandler {
         const val ACTION_START = "com.camstream.app.action.START"
         const val ACTION_STOP = "com.camstream.app.action.STOP"
         const val ACTION_SWITCH_CAMERA = "com.camstream.app.action.SWITCH_CAMERA"
+        const val ACTION_SET_AUDIO = "com.camstream.app.action.SET_AUDIO"
 
         const val EXTRA_CAMERA_ID = "camera_id"
         const val EXTRA_QUALITY_KEY = "quality_key"
         const val EXTRA_SERVER_URL = "server_url"
+        const val EXTRA_AUDIO_ENABLED = "audio_enabled"
 
         const val CONTROL_PORT = 8090
 
@@ -37,6 +39,7 @@ class RtmpStreamService : LifecycleService(), ControlHandler {
     private var currentCameraId: String? = null
     private var currentQuality: QualityPreset = QualityPreset.DEFAULT
     private var currentServerUrl: String? = null
+    private var currentAudioEnabled: Boolean = true
 
     private val connectChecker = object : ConnectChecker {
         override fun onConnectionStarted(url: String) {
@@ -84,34 +87,42 @@ class RtmpStreamService : LifecycleService(), ControlHandler {
                 intent.getStringExtra(EXTRA_CAMERA_ID)?.let { onSwitchCamera(it) }
                 return START_NOT_STICKY
             }
+            ACTION_SET_AUDIO -> {
+                onSetAudioEnabled(intent.getBooleanExtra(EXTRA_AUDIO_ENABLED, true))
+                return START_NOT_STICKY
+            }
             else -> {
                 val cameraId = intent?.getStringExtra(EXTRA_CAMERA_ID)
                 val quality = QualityPreset.fromKey(intent?.getStringExtra(EXTRA_QUALITY_KEY))
                 val serverUrl = intent?.getStringExtra(EXTRA_SERVER_URL)
+                val audioEnabled = intent?.getBooleanExtra(EXTRA_AUDIO_ENABLED, true) ?: true
                 if (serverUrl.isNullOrBlank()) {
                     StreamStatus.notifyChanged(StreamStatus.State.ERROR, "Falta la dirección del servidor")
                     stopSelf()
                     return START_NOT_STICKY
                 }
-                startStreaming(cameraId, quality, serverUrl)
+                startStreaming(cameraId, quality, serverUrl, audioEnabled)
             }
         }
         return START_NOT_STICKY
     }
 
-    private fun startStreaming(cameraId: String?, quality: QualityPreset, serverUrl: String) {
+    private fun startStreaming(cameraId: String?, quality: QualityPreset, serverUrl: String, audioEnabled: Boolean) {
         StreamStatus.notifyChanged(StreamStatus.State.STARTING, cameraId = cameraId, qualityKey = quality.key)
         startForeground(NOTIFICATION_ID, buildNotification())
 
         currentCameraId = cameraId
         currentQuality = quality
         currentServerUrl = serverUrl
+        currentAudioEnabled = audioEnabled
         val rotation = CameraHelper.getCameraOrientation(this)
 
-        try {
-            streamer.prepareAudio()
-        } catch (_: Exception) {
-            // no microphone permission/hardware; stream continues video-only
+        if (audioEnabled) {
+            try {
+                streamer.prepareAudio()
+            } catch (_: Exception) {
+                // no microphone permission/hardware; stream continues video-only
+            }
         }
 
         val videoOk = streamer.prepareVideo(quality.width, quality.height, quality.fps, quality.videoBitrateBps, rotation)
@@ -157,7 +168,18 @@ class RtmpStreamService : LifecycleService(), ControlHandler {
             if (streamer.isStreaming) streamer.stopStream()
             if (streamer.isOnPreview) streamer.stopPreview()
         }
-        startStreaming(currentCameraId, quality, serverUrl)
+        startStreaming(currentCameraId, quality, serverUrl, currentAudioEnabled)
+    }
+
+    override fun onSetAudioEnabled(enabled: Boolean) {
+        val serverUrl = currentServerUrl ?: return
+        if (enabled == currentAudioEnabled) return
+        // Adding/removing the audio track needs a fresh encoder setup, same as a quality change.
+        if (this::streamer.isInitialized) {
+            if (streamer.isStreaming) streamer.stopStream()
+            if (streamer.isOnPreview) streamer.stopPreview()
+        }
+        startStreaming(currentCameraId, currentQuality, serverUrl, enabled)
     }
 
     override fun onStop() {
@@ -178,6 +200,7 @@ class RtmpStreamService : LifecycleService(), ControlHandler {
             put("streaming", streaming)
             put("cameraId", currentCameraId ?: JSONObject.NULL)
             put("qualityKey", currentQuality.key)
+            put("audioEnabled", currentAudioEnabled)
             put("cameras", camerasJson)
             put("qualities", qualitiesJson)
         }

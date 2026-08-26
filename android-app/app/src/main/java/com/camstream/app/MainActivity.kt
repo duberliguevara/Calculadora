@@ -14,6 +14,7 @@ import com.camstream.app.databinding.ActivityMainBinding
 private const val PREFS_NAME = "camstream_prefs"
 private const val PREF_CAMERA_ID = "camera_id"
 private const val PREF_QUALITY_KEY = "quality_key"
+private const val PREF_AUDIO_ENABLED = "audio_enabled"
 private const val RTMP_PORT = 1935
 private const val STREAM_PATH = "camstream"
 
@@ -53,6 +54,7 @@ class MainActivity : AppCompatActivity(), StreamStatus.Listener {
 
         setupCameraDropdown()
         setupQualityDropdown()
+        setupAudioSwitch()
 
         binding.toggleButton.setOnClickListener {
             if (isActiveState(currentState)) stopStreamingService() else requestPermissionsAndStart()
@@ -128,6 +130,20 @@ class MainActivity : AppCompatActivity(), StreamStatus.Listener {
         }
     }
 
+    private fun setupAudioSwitch() {
+        binding.audioSwitch.isChecked = prefs.getBoolean(PREF_AUDIO_ENABLED, true)
+        binding.audioSwitch.setOnCheckedChangeListener { _, checked ->
+            prefs.edit().putBoolean(PREF_AUDIO_ENABLED, checked).apply()
+            if (isActiveState(currentState)) {
+                val intent = Intent(this, RtmpStreamService::class.java).apply {
+                    action = RtmpStreamService.ACTION_SET_AUDIO
+                    putExtra(RtmpStreamService.EXTRA_AUDIO_ENABLED, checked)
+                }
+                startService(intent)
+            }
+        }
+    }
+
     private fun requestPermissionsAndStart() {
         val needed = mutableListOf(android.Manifest.permission.CAMERA, android.Manifest.permission.RECORD_AUDIO)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -151,6 +167,7 @@ class MainActivity : AppCompatActivity(), StreamStatus.Listener {
             putExtra(RtmpStreamService.EXTRA_CAMERA_ID, selectedCameraId)
             putExtra(RtmpStreamService.EXTRA_QUALITY_KEY, selectedQuality.key)
             putExtra(RtmpStreamService.EXTRA_SERVER_URL, serverUrl)
+            putExtra(RtmpStreamService.EXTRA_AUDIO_ENABLED, binding.audioSwitch.isChecked)
         }
         ContextCompat.startForegroundService(this, intent)
     }

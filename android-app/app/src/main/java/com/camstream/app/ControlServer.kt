@@ -11,6 +11,7 @@ import kotlin.concurrent.thread
 interface ControlHandler {
     fun onSwitchCamera(cameraId: String)
     fun onChangeQuality(qualityKey: String)
+    fun onSetAudioEnabled(enabled: Boolean)
     fun onStop()
     fun statusJson(): JSONObject
 }
@@ -72,6 +73,10 @@ class ControlServer(private val port: Int, private val handler: ControlHandler) 
                 }
                 "/quality" -> {
                     params["key"]?.let { handler.onChangeQuality(it) }
+                    handler.statusJson()
+                }
+                "/audio" -> {
+                    params["enabled"]?.let { handler.onSetAudioEnabled(it == "true") }
                     handler.statusJson()
                 }
                 "/stop" -> {

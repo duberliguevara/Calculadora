@@ -47,6 +47,11 @@ CANDIDATE_ADB_PATHS = [
     r"C:\Users\PC\AppData\Local\Android\Sdk\platform-tools\adb.exe",
 ]
 
+# Without this, every adb.exe call below flashes a new console window —
+# pythonw has no console of its own, so Windows allocates one for each
+# console-subsystem child process unless told not to.
+NO_WINDOW = subprocess.CREATE_NO_WINDOW if hasattr(subprocess, "CREATE_NO_WINDOW") else 0
+
 
 def find_adb() -> str | None:
     for candidate in CANDIDATE_ADB_PATHS:
@@ -54,7 +59,7 @@ def find_adb() -> str | None:
             return candidate
         if candidate.lower().endswith(".exe"):
             try:
-                subprocess.run([candidate, "version"], capture_output=True, timeout=5)
+                subprocess.run([candidate, "version"], capture_output=True, timeout=5, creationflags=NO_WINDOW)
                 return candidate
             except (OSError, subprocess.TimeoutExpired):
                 continue
@@ -83,13 +88,12 @@ class MediaServer:
         if not os.path.isfile(MEDIAMTX_EXE):
             return f"No se encontró {MEDIAMTX_EXE}"
         try:
-            creationflags = subprocess.CREATE_NO_WINDOW if hasattr(subprocess, "CREATE_NO_WINDOW") else 0
             self.process = subprocess.Popen(
                 [MEDIAMTX_EXE, MEDIAMTX_CONFIG],
                 cwd=os.path.dirname(MEDIAMTX_EXE),
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
-                creationflags=creationflags,
+                creationflags=NO_WINDOW,
             )
             return None
         except OSError as exc:
@@ -252,6 +256,13 @@ class CompanionApp:
         self.quality_combo.pack(side="left", fill="x", expand=True)
         self.quality_combo.bind("<<ComboboxSelected>>", self._on_quality_selected)
 
+        self.audio_var = tk.BooleanVar(value=True)
+        self.audio_check = ttk.Checkbutton(
+            control_frame, text="Compartir audio (micrófono)", variable=self.audio_var,
+            command=self._on_audio_toggled, state="disabled",
+        )
+        self.audio_check.pack(anchor="w", padx=8, pady=4)
+
         self.stop_button = ttk.Button(
             control_frame, text="Detener transmisión", command=self.remote_stop, state="disabled"
         )
@@ -333,6 +344,10 @@ class CompanionApp:
             match_q = next((q["label"] for q in self.qualities if q["key"] == current_quality), None)
             if match_q and self.quality_var.get() != match_q:
                 self.quality_var.set(match_q)
+
+            audio_enabled = status.get("audioEnabled")
+            if audio_enabled is not None and self.audio_var.get() != audio_enabled:
+                self.audio_var.set(audio_enabled)
         finally:
             self._updating_controls = False
 
@@ -340,6 +355,7 @@ class CompanionApp:
         state = "readonly" if enabled else "disabled"
         self.camera_combo.config(state=state)
         self.quality_combo.config(state=state)
+        self.audio_check.config(state="normal" if enabled else "disabled")
         self.stop_button.config(state="normal" if enabled else "disabled")
         if not enabled:
             self.control_status.config(text="Conecta el celular para habilitar el control")
@@ -368,6 +384,15 @@ class CompanionApp:
             target=lambda: self._safe_control_call(phone_ip, f"/quality?key={quality['key']}"), daemon=True
         ).start()
 
+    def _on_audio_toggled(self):
+        if self._updating_controls or not self.phone_ip:
+            return
+        enabled = "true" if self.audio_var.get() else "false"
+        phone_ip = self.phone_ip
+        threading.Thread(
+            target=lambda: self._safe_control_call(phone_ip, f"/audio?enabled={enabled}"), daemon=True
+        ).start()
+
     def remote_stop(self):
         if not self.phone_ip:
             return
@@ -389,7 +414,7 @@ class CompanionApp:
     def _check_usb_once(self):
         try:
             devices = subprocess.run(
-                [self.adb_path, "devices"], capture_output=True, text=True, timeout=5
+                [self.adb_path, "devices"], capture_output=True, text=True, timeout=5, creationflags=NO_WINDOW
             ).stdout
         except Exception:
             return
@@ -414,12 +439,12 @@ class CompanionApp:
             # reverse: lets the phone's RTMP push (phone -> 127.0.0.1:1935) reach our server.
             subprocess.run(
                 [self.adb_path, "reverse", f"tcp:{RTMP_PORT}", f"tcp:{RTMP_PORT}"],
-                check=True, capture_output=True, text=True, timeout=10,
+                check=True, capture_output=True, text=True, timeout=10, creationflags=NO_WINDOW,
             )
             # forward: the opposite direction, lets us (PC) reach the phone's control server.
             subprocess.run(
                 [self.adb_path, "forward", f"tcp:{CONTROL_PORT}", f"tcp:{CONTROL_PORT}"],
-                check=True, capture_output=True, text=True, timeout=10,
+                check=True, capture_output=True, text=True, timeout=10, creationflags=NO_WINDOW,
             )
         except subprocess.CalledProcessError:
             self.root.after(0, lambda: self.usb_status.config(text="🟡 Cable detectado, reintentando conexión…"))
