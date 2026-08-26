@@ -26,7 +26,9 @@ const els = {
   cancelModalBtn: document.getElementById("cancel-modal-btn"),
   fieldPlan: document.getElementById("field-plan"),
   serviceChecks: document.getElementById("service-checks"),
-  managePlansBtn: document.getElementById("manage-plans-btn"),
+  managePlansBtn: document.getElementById("nav-plans-btn"),
+  navClientesBtn: document.getElementById("nav-clientes-btn"),
+  navPlansBtn: document.getElementById("nav-plans-btn"),
   plansModalBackdrop: document.getElementById("plans-modal-backdrop"),
   planList: document.getElementById("plan-list"),
   planForm: document.getElementById("plan-form"),
@@ -373,14 +375,29 @@ function setCheckedServices(container, servicios) {
   });
 }
 
-els.managePlansBtn.addEventListener("click", () => {
+function setActiveNav(activeBtn) {
+  els.navClientesBtn.classList.toggle("active", activeBtn === els.navClientesBtn);
+  els.navPlansBtn.classList.toggle("active", activeBtn === els.navPlansBtn);
+}
+
+els.navPlansBtn.addEventListener("click", () => {
   els.plansModalBackdrop.classList.remove("hidden");
+  setActiveNav(els.navPlansBtn);
+});
+els.navClientesBtn.addEventListener("click", () => {
+  els.plansModalBackdrop.classList.add("hidden");
+  setActiveNav(els.navClientesBtn);
+  window.scrollTo({ top: 0, behavior: "smooth" });
 });
 els.closePlansBtn.addEventListener("click", () => {
   els.plansModalBackdrop.classList.add("hidden");
+  setActiveNav(els.navClientesBtn);
 });
 els.plansModalBackdrop.addEventListener("click", (e) => {
-  if (e.target === els.plansModalBackdrop) els.plansModalBackdrop.classList.add("hidden");
+  if (e.target === els.plansModalBackdrop) {
+    els.plansModalBackdrop.classList.add("hidden");
+    setActiveNav(els.navClientesBtn);
+  }
 });
 
 els.planForm.addEventListener("submit", async (e) => {
